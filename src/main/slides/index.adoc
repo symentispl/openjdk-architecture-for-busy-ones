@@ -1,0 +1,33 @@
+= Jakże vspaniała maszyna
+Architektura OpenJDK dla upartych
+:idprefix:
+:stem: asciimath
+:backend: html
+:source-highlighter: highlightjs
+:highlightjs-style: github
+:revealjs_history: true
+:revealjs_theme: night
+:revealjs_controls: false
+:revealjs_width: 1920
+:revealjs_height: 1080
+:imagesdir: images
+:customcss: css/custom.css
+
+== about us
+
+=== Krystian Zybała
+
+=== Jarosław Pałka
+
+Neo4j (a graph database) performance engineer
+
+over 20 years with JVM, +
+since early days of no native threads and, +
+no JIT and slow as hell GC
+
+speaker, coder, architect
+
+founder of SegFault conference +
+godfather of Programistyczna Grupa Rozwoju
+
+=== abstract
