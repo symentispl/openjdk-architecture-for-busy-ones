@@ -1,0 +1,41 @@
+InitializeJVM
+CreateJavaVM
+quicken_jni_functions
+quicken_jni_functions
+StubCodeDesc::freeze
+ os::initialize_jdk_signal_support(CHECK_JNI_ERR)
+ServiceThread::initialize
+MonitorDeflationThread::initialize
+CompileBroker::compilation_init_phase1
+CompileBroker::compilation_init_phase2
+initialize_jsr292_core_classes
+call_initPhase2
+JvmtiExport::enter_start_phase
+ JvmtiExport::post_vm_start
+call_initPhase3
+SystemDictionary::compute_java_loaders
+ClassLoader::initialize_module_path
+JvmtiExport::enter_live_phase
+PerfMemory::set_accessible
+Management::initialize(THREAD);
+ MetaspaceShared::preload_and_dump
+??
+JNI_CreateJavaVM_inner
+ JvmtiExport::post_early_vm_start
+initialize_java_lang_classes
+JavaMain
+Threads::create_vm
+os::init
+os::init_before_ergo
+vm_init_globals
+OopStorageSet::create_strong
+ new JavaThread()
+ObjectMonitor::Initialize
+ObjectSynchronizer::initialize
+init_globals
+ JvmtiExport::enter_early_start_phase
+JVMInit
+JVM INIT
+ContinueInNewThread
+LoadMainClass
+CallStaticVoidMethod
