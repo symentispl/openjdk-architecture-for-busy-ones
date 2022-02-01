@@ -11,3 +11,7 @@ By wygenerować prezentację, wystarczy polecenie:
 By jednocześnie modyfikować i oglądać zmiany:
 
     ./gradlew asciidoctorRevealJs liveReload --livereload-verbose
+
+i potem przeglądarką na [http://localhost:35729/](http://localhost:35729/)
+
+Jeśli masz LiveReload w przeglądarce, wszystko powinno działać.  
