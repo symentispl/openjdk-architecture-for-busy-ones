@@ -31,3 +31,4 @@ founder of SegFault conference +
 godfather of Programistyczna Grupa Rozwoju
 
 === abstract
+

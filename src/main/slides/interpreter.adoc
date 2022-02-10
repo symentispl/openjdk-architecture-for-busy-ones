@@ -1,0 +1,72 @@
+= JVM interpreter 
+Architektura OpenJDK dla upartych
+:idprefix:
+:stem: asciimath
+:backend: html
+:source-highlighter: highlightjs
+:highlightjs-style: github
+:revealjs_history: true
+:revealjs_theme: night
+:revealjs_controls: false
+:revealjs_width: 1920
+:revealjs_height: 1080
+:imagesdir: images
+:customcss: css/custom.css
+
+== JVM interpreter
+
+this isn't actual all that simple, because we have three different interpreters
+* high level language version (aka c++ interpreter), actual interpretation of bytecodes,
+* "zero" interpreter generator, used by "zero" JDK build
+* assembly language version (aka template interpreter), generation of assembly code that creates and manages interpreter runtime frames
+
+=== BytecodeInterpreter
+
+for simplicity sake, we are going to take a look at C++ interpreter +
+which you can find in `src/hotspot/share/interpreter/zero/bytecodeInterpreter.cpp`
+
+but to understand interpreter we first need to understand another concept
+
+=== frame
+
+//TODO: obrazek tu
+
+=== !
+
+
+BytecodeInterpreter -> JavaThread* _thread
+BytecodeInterpreter -> address _bcp (bytecode instruction pointer)
+BytecodeInterpreter -> intptr_t* _locals
+BytecodeInterpreter -> Method* _method (being executed)(in Metaspace)
+BytecodeInterpreter -> intptr_t* _stack
+BytecodeInterpreter -> intptr_t* _stack_base
+BytecodeInterpreter -> intptr_t* _stack_limit
+BytecodeInterpreter -> interpreterState _prev_link (previous interpreter state)
+BytecodeInterpreter -> BasicObjectLock* _monitor_base // base of monitors on the native stack
+
+=== interpreter
+
+// A frame represents a physical stack frame (an activation).  Frames
+// can be C or Java frames, and the Java frames can be interpreted or
+// compiled.  In contrast, vframes represent source-level activations,
+// so that one physical frame can correspond to multiple source level
+// frames because of inlining.
+
+=== !
+
+we have two kinds of frames, physical frames (aka frames) and virtual frames (aka vframes)
+
+physical frames can be either C (native) or Java frame, where Java frame can be either interpreted or compiled
+
+virtual frame represent source-level frames, which means if methods is inlined, 
+there will be single physical frame and many virtual frames
+
+=== physical frame
+
+* pointer to a stack
+* pointer to next instruction
+* pointer to code (aka `CodeBlob`) that "owns" instruction
+* deoptimization status
+
+
+

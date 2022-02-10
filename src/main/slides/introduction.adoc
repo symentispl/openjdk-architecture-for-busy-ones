@@ -1,0 +1,24 @@
+= Introduction to OpenJDK 
+Architektura OpenJDK dla upartych
+:idprefix:
+:stem: asciimath
+:backend: html
+:source-highlighter: highlightjs
+:highlightjs-style: github
+:revealjs_history: true
+:revealjs_theme: night
+:revealjs_controls: false
+:revealjs_width: 1920
+:revealjs_height: 1080
+:imagesdir: images
+:customcss: css/custom.css
+
+
+== if you want to follow along
+
+    git clone https://github.com/openjdk/jdk17
+    cd jdk17
+    chmod +x configure
+    ./configure // make sure your java points to JDK 17 or 16, this is required for boot JDK
+    make images
+    make vscode-project // import project workspace into VSCode
