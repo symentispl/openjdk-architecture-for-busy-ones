@@ -14,16 +14,36 @@ Architektura OpenJDK dla upartych
 :customcss: css/custom.css
 
 
-== How start?
+== How GC start?
 
 === init globals 
 === universe init
 ==== initialize_global_behaviours
 
 ==== GCLogPrecious::initialize();
-==== GCConfig::arguments()->initialize_heap_sizes();
-==== Universe::initialize_heap();
-===== GCConfig::arguments()->create_heap();
+==== Initialize heap size
+// GCConfig::arguments()->initialize_heap_sizes();
+Memory Aligment, new Ratio, Min/Max Heap Size
+// Based on arguments JVM try to figure out what exactly arguments should be appled
+// There is also assertion checking proper configuration like MaxHeapSize should be greater 
+// Also that proprotion like newRatio etc.
+// Also there is memory aligment 
+// Parallel
+// The card marking array and the offset arrays for old generations are
+// committed in os pages as well. Make sure they are entirely full (to
+// avoid partial page problems), e.g. if 512 bytes heap corresponds to 1
+// byte entry and the os page size is 4096, the maximum heap size should
+// be 512*4096 = 2MB aligned.
+
+==== Initalize heap 
+// Universe::initialize_heap();
+// GCConfig::arguments()->create_heap();
+Based on argument gc algorithm is choosen and used to initlize heap.
+
+// It used Strategy Pattern as way to handle this case. 
+
+
+
 ===== _collectedHeap->initialize(
 ==== Universe::initialize_tlab();
 ==== Metaspace::global_initialize();
