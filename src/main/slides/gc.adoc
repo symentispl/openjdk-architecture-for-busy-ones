@@ -12,3 +12,33 @@ Architektura OpenJDK dla upartych
 :revealjs_height: 1080
 :imagesdir: images
 :customcss: css/custom.css
+
+
+== How start?
+
+=== init globals 
+=== universe init
+==== initialize_global_behaviours
+
+==== GCLogPrecious::initialize();
+==== GCConfig::arguments()->initialize_heap_sizes();
+==== Universe::initialize_heap();
+===== GCConfig::arguments()->create_heap();
+===== _collectedHeap->initialize(
+==== Universe::initialize_tlab();
+==== Metaspace::global_initialize();
+==== MetaspaceCounters::initialize_performance_counters();
+==== JVMFlagLimit::check_all_constraints 
+==== ClassLoaderData::init_null_class_loader_data();
+
+==== MetaspaceShared::initialize_shared_spaces();
+==== StringTable::create_table();
+==== SymbolTable::create_table();
+==== StringTable::create_table();
+
+
+==== Arguments::is_dumping_archive()) {
+==== MetaspaceShared::prepare_for_dumping();
+==== Universe::initialize_verify_flags();
+  
+==== ResolvedMethodTable::create_table();
