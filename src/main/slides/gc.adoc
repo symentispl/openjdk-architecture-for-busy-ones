@@ -1,19 +1,12 @@
-<<<<<<< HEAD
-= Garbage collection 
-Architektura OpenJDK dla upartych
-:idprefix:
-:stem: asciimath
-:backend: html
-:source-highlighter: highlightjs
-:highlightjs-style: github
-:revealjs_history: true
-:revealjs_theme: night
-:revealjs_controls: false
-:revealjs_width: 1920
-:revealjs_height: 1080
-:imagesdir: images
-:customcss: css/custom.css
+== Garbage collection 
 
+* OopMaps
+* safepoint -> kiedy są sprawdzane
+* stack processing (reachability)
+* root, heap
+* bariery?
+* card table / card marking
+* TLAB (inside & outside)
 
 == How GC start?
 
@@ -72,14 +65,3 @@ Thread Local Allocation Buffer
 ==== Universe::initialize_verify_flags();
   
 ==== ResolvedMethodTable::create_table();
-=======
-== Garbage collection 
-
-* OopMaps
-* safepoint -> kiedy są sprawdzane
-* stack processing (reachability)
-* root, heap
-* bariery?
-* card table / card marking
-* TLAB (inside & outside)
->>>>>>> 8a2114c (prezentacja podzielona na sekcje)
