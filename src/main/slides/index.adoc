@@ -37,3 +37,10 @@ godfather of Programistyczna Grupa Rozwoju
 * bytecode interpreter
 * time for just-in-time compiler
 * garbage collector black magic
+
+include::src/main/slides/initialization.adoc[]
+include::src/main/slides/bytecode.adoc[]
+include::src/main/slides/interpreter.adoc[]
+include::src/main/slides/jit.adoc[]
+include::src/main/slides/gc.adoc[]
+
