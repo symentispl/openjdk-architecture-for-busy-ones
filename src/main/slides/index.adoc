@@ -32,3 +32,8 @@ godfather of Programistyczna Grupa Rozwoju
 
 === abstract
 
+* JVM initialization
+* loading and verifying bytecode
+* bytecode interpreter
+* time for just-in-time compiler
+* garbage collector black magic

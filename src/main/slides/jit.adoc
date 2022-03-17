@@ -1,0 +1,13 @@
+== time for just-in-time compiler
+
+JIT
+* C1/C2 (PGO)
+* method counters & type profile (co jest profilowane)
+* to jest plugin
+* CompilationTask -> CompilationQueue (bail out)
+* simplePolicy.hpp
+* speculating compiler -> deopt
+* uncommontrap -> stab
+* CHA
+* OSR -> jak to podmiana działa ( napisz benchmar z while true)
+* register allocation & inline

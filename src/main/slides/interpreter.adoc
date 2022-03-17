@@ -1,17 +1,13 @@
-= JVM interpreter 
-Architektura OpenJDK dla upartych
-:idprefix:
-:stem: asciimath
-:backend: html
-:source-highlighter: highlightjs
-:highlightjs-style: github
-:revealjs_history: true
-:revealjs_theme: night
-:revealjs_controls: false
-:revealjs_width: 1920
-:revealjs_height: 1080
-:imagesdir: images
-:customcss: css/custom.css
+== bytecode interpreter
+
+interpreter (ramki, rodzaj interpretrów, zero)
+* stack & local var table
+* typach interpreterów
+* typy ramek, inter, deopt, native, stub (intrisics)
+* new anew -> GC?
+* invoke* ->
+* metod profile (co jest profilowane) ? -> JIT
+* exception handling -> profile
 
 == JVM interpreter
 

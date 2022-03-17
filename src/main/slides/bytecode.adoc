@@ -1,0 +1,6 @@
+== loading and veryfining bytecode
+
+bootstrap classloader (ładowanie class)
+* gdzie ten kod ląduje (metaspace) Klass
+* weryfikacja gdzie too w kodzie, co robi (po co)
+* stackmap

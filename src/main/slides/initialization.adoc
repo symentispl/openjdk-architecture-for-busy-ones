@@ -1,0 +1,10 @@
+== JVM initialization
+
+* OopMaps
+* safepoint -> kiedy są sprawdzane
+* stack processing (reachability)
+* root, heap
+* bariery?
+* card table / card marking
+* TLAB (inside & outside)
+* 

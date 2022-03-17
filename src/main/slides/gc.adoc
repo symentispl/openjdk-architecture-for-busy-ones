@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 = Garbage collection 
 Architektura OpenJDK dla upartych
 :idprefix:
@@ -71,3 +72,14 @@ Thread Local Allocation Buffer
 ==== Universe::initialize_verify_flags();
   
 ==== ResolvedMethodTable::create_table();
+=======
+== Garbage collection 
+
+* OopMaps
+* safepoint -> kiedy są sprawdzane
+* stack processing (reachability)
+* root, heap
+* bariery?
+* card table / card marking
+* TLAB (inside & outside)
+>>>>>>> 8a2114c (prezentacja podzielona na sekcje)
