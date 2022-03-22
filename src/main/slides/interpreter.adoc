@@ -11,15 +11,188 @@ interpreter (ramki, rodzaj interpretrów, zero)
 
 == JVM interpreter
 
-this isn't actual all that simple, because we have three different interpreters
+this isn't actual all that simple, because we have two different interpreters
+
 * high level language version (aka c++ interpreter), actual interpretation of bytecodes,
-* "zero" interpreter generator, used by "zero" JDK build
 * assembly language version (aka template interpreter), generation of assembly code that creates and manages interpreter runtime frames
+
+=== !
+
+src/hotspot/share/interpreter/abstractInterpreter.hpp
+
+[source,cpp]
+----
+// This file contains the platform-independent parts
+// of the abstract interpreter and the abstract interpreter generator.
+
+// Organization of the interpreter(s). There exists two different interpreters in hotpot
+// an assembly language version (aka template interpreter) and a high level language version
+// (aka c++ interpreter). Th division of labor is as follows:
+
+// Template Interpreter          Zero Interpreter       Functionality
+//
+// templateTable*                bytecodeInterpreter*   actual interpretation of bytecodes
+//
+// templateInterpreter*          zeroInterpreter*       generation of assembly code that creates
+//                                                      and manages interpreter runtime frames.
+//
+----
+
+=== a word about "zero" JVM
+
+a "zero" JVM is a version of JVM which with minimal (in a perfect world "zero") set of changes will run on new architecture and operating system
+
+it means as long GCC (in general C compiler) works on this architecture, JVM
+will work there (of course only in interpreted mode)
+
+it doesn't mean Java will work there, only JVM (mindfuck)
 
 === BytecodeInterpreter
 
 for simplicity sake, we are going to take a look at C++ interpreter +
-which you can find in `src/hotspot/share/interpreter/zero/bytecodeInterpreter.cpp`
+which you can find in +
+`src/hotspot/share/interpreter/zero/bytecodeInterpreter.hpp` +
+`src/hotspot/share/interpreter/zero/zeroInterpreter.hpp` +
+`src/hotspot/share/interpreter/zero/zeroInterpreterGenerator.hpp`
+
+=== !
+
+[source,cpp]
+----
+// src/hotspot/share/memory/allocation.hpp
+// Base class for objects allocated on the stack only.
+// Calling new or delete will result in fatal error.
+class StackObj ALLOCATION_SUPER_CLASS_SPEC {
+    ...
+};
+
+// src/hotspot/share/interpreter/zero/bytecodeInterpreter.hpp
+class BytecodeInterpreter : StackObj {
+    ...
+};
+
+typedef class BytecodeInterpreter* interpreterState;
+
+static void run(interpreterState istate);
+----
+
+=== static void run(interpreterState istate);
+
+image::https://media.giphy.com/media/JUwT5qRmpFjqOhCLAB/giphy.gif[background]
+
+=== !
+
+[source,cpp]
+----
+  intptr_t*        topOfStack = (intptr_t *)istate->stack(); /* access with STACK macros */
+  address          pc = istate->bcp();
+  jubyte opcode;
+  intptr_t*        locals = istate->locals();
+  ConstantPoolCache*    cp = istate->constants(); // method()->constants()->cache()
+#ifdef LOTS_OF_REGS
+  JavaThread*      THREAD = istate->thread();
+#else
+----
+
+=== !
+
+interpreter uses messages to communicate with itself :) +
+and with frame manager (aka interpreter generator)
+
+[source,cpp]
+----
+    enum messages {
+         no_request = 0,            // unused
+         initialize,                // Perform one time interpreter initializations (assumes all switches set)
+         // status message to C++ interpreter
+         method_entry,              // initial method entry to interpreter
+         method_resume,             // frame manager response to return_from_method request (assuming a frame to resume)
+         deopt_resume,              // returning from a native call into a deopted frame
+         deopt_resume2,             // deopt resume as a result of a PopFrame
+         got_monitors,              // frame manager response to more_monitors request
+         rethrow_exception,         // unwinding and throwing exception
+         // requests to frame manager from C++ interpreter
+         call_method,               // request for new frame from interpreter, manager responds with method_entry
+         return_from_method,        // request from interpreter to unwind, manager responds with method_continue
+         more_monitors,             // need a new monitor
+         throwing_exception,        // unwind stack and rethrow
+         popping_frame,             // unwind call and retry call
+         do_osr,                    // request this invocation be OSR's
+         early_return               // early return as commanded by jvmti
+    };
+----
+
+=== !
+
+[source]
+----
+initialize:
+    entry_method:
+        if(synchronized)
+            lock;
+        goto run;
+
+run:
+    do_update_instruction_count;
+    fetch opcode;
+    (use_labels || opcode_switch)
+----
+
+=== !
+
+we could go through all opcodes, but there only few cases that are interesting
+
+bytecodeInterpreter:2308
+
+=== !
+
+[mermaid,scale=2]
+....
+sequenceDiagram
+    JVM->>ZeroInterpreter:initialize_code
+    ZeroInterpreter->>ZeroInterpreterGenerator:generate_all
+    ZeroInterpreter->>BytecodeInterpreter:run(istate->msg=initialize)
+    JVM->>ZeroInterpreter:ZeroInterpreter:normal_entry(Method* method)
+    ZeroInterpreter->>InterpreterFrame:build
+    ZeroInterpreter->>JavaThread:push_zero_frame
+    ZeroInterpreter->>ZeroInterpreter:main_loop
+    activate ZeroInterpreter
+    ZeroInterpreter->>BytecodeInterpreter:run()
+    ZeroInterpreter->>ZeroInterpreter:handle message from BytecodeInterpreter 
+    deactivate ZeroInterpreter
+....
+
+=== !
+
+[mermaid,scale=2]
+....
+sequenceDiagram
+    JVM->>ZeroInterpreter:initialize_code
+    ZeroInterpreter->>ZeroInterpreterGenerator:generate_all
+    ZeroInterpreter->>BytecodeInterpreter:run(istate->msg=initialize)
+    JVM->>ZeroInterpreter:ZeroInterpreter:normal_entry(Method* method)
+    ZeroInterpreter->>InterpreterFrame:build
+    ZeroInterpreter->>JavaThread:push_zero_frame
+    ZeroInterpreter->>ZeroInterpreter:main_loop
+    activate ZeroInterpreter
+    ZeroInterpreter->>BytecodeInterpreter:run()
+    ZeroInterpreter->>ZeroInterpreter:handle message from BytecodeInterpreter 
+    deactivate ZeroInterpreter
+....
+
+=== a twisted logic of calling method
+
+[mermaid,scale=2]
+....
+sequenceDiagram
+    Bytecode->>BytecodeInterpreter:_invoke_virtual
+    BytecodeInterpreter->>Method:from_interpreted_entry
+    BytecodeInterpreter->>BytecodeInterpreter:set_callee_entry_point
+    BytecodeInterpreter->>ZeroInterpreter:call_method
+    ZeroInterpreter->>Method:callee_entry_point
+....
+
+=== !
 
 but to understand interpreter we first need to understand another concept
 

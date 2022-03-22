@@ -12,6 +12,8 @@ Architektura OpenJDK dla upartych
 :revealjs_height: 1080
 :imagesdir: images
 :customcss: css/custom.css
+:mmdc: /home/jarek/node_modules/.bin/mmdc
+
 
 == about us
 
