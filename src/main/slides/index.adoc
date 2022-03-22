@@ -40,6 +40,7 @@ godfather of Programistyczna Grupa Rozwoju
 * time for just-in-time compiler
 * garbage collector black magic
 
+include::src/main/slides/introduction.adoc[]
 include::src/main/slides/initialization.adoc[]
 include::src/main/slides/bytecode.adoc[]
 include::src/main/slides/interpreter.adoc[]

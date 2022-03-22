@@ -28,7 +28,6 @@ tasks.asciidoctorRevealJs {
     sourceDir("src/main/slides")
     sources {
         include("index.adoc")
-        include("interpreter.adoc")
     }
     setOutputDir("build/slides")
     resources {

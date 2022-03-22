@@ -7,4 +7,3 @@
 * bariery?
 * card table / card marking
 * TLAB (inside & outside)
-* 

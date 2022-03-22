@@ -1,13 +1,12 @@
 == bytecode interpreter
 
-interpreter (ramki, rodzaj interpretrów, zero)
+* bytecode interpreter and generator interpreter
+* method calls and entry points
+* exception handling
+* object allocation and cooperation with GC
 * stack & local var table
-* typach interpreterów
-* typy ramek, inter, deopt, native, stub (intrisics)
-* new anew -> GC?
-* invoke* ->
-* metod profile (co jest profilowane) ? -> JIT
-* exception handling -> profile
+* physical and virtual frames
+* const method, method data and method counters
 
 == JVM interpreter
 
@@ -140,9 +139,9 @@ run:
 
 === !
 
-we could go through all opcodes, but there only few cases that are interesting
+we could go through all opcodes, but there are only few cases that are interesting
 
-bytecodeInterpreter:2308
+// bytecodeInterpreter:2308
 
 === !
 
@@ -192,34 +191,47 @@ sequenceDiagram
     ZeroInterpreter->>Method:callee_entry_point
 ....
 
+=== method and call entry point
+
+a method in JVM can be either interpreted or compiled +
+(to complete a picture it can also be native or intrinsic)
+
+from an interpreted method you can call either +
+other interpreted or compiled method +
+but how do you know if method has been compiled? +
+and how do you handle different logic to call interpreted vs compiled?
+
 === !
 
-but to understand interpreter we first need to understand another concept
+[source,cpp]
+----
+// src/hotspot/share/oops/method.hpp:Method
 
-=== frame
+// Entry point for calling both from and to the interpreter.
+  address _i2i_entry;           // All-args-on-stack calling convention
+  // Entry point for calling from compiled code, to compiled code if it exists
+  // or else the interpreter.
+  volatile address _from_compiled_entry;        // Cache of: _code ? _code->entry_point() : _adapter->c2i_entry()
+  // The entry point for calling both from and to compiled code is
+  // "_code->entry_point()".  Because of tiered compilation and de-opt, this
+  // field can come and go.  It can transition from NULL to not-null at any
+  // time (whenever a compile completes).  It can transition from not-null to
+  // NULL only at safepoints (because of a de-opt).
+  CompiledMethod* volatile _code;                       // Points to the corresponding piece of native code
+  volatile address           _from_interpreted_entry; // Cache of _code ? _adapter->i2c_entry() : _i2i_entry
+----
 
-//TODO: obrazek tu
-
-=== !
-
-
-BytecodeInterpreter -> JavaThread* _thread
-BytecodeInterpreter -> address _bcp (bytecode instruction pointer)
-BytecodeInterpreter -> intptr_t* _locals
-BytecodeInterpreter -> Method* _method (being executed)(in Metaspace)
-BytecodeInterpreter -> intptr_t* _stack
-BytecodeInterpreter -> intptr_t* _stack_base
-BytecodeInterpreter -> intptr_t* _stack_limit
-BytecodeInterpreter -> interpreterState _prev_link (previous interpreter state)
-BytecodeInterpreter -> BasicObjectLock* _monitor_base // base of monitors on the native stack
-
-=== interpreter
+=== frames
 
 // A frame represents a physical stack frame (an activation).  Frames
 // can be C or Java frames, and the Java frames can be interpreted or
 // compiled.  In contrast, vframes represent source-level activations,
 // so that one physical frame can correspond to multiple source level
 // frames because of inlining.
+
+
+=== !
+
 
 === !
 
@@ -230,12 +242,8 @@ physical frames can be either C (native) or Java frame, where Java frame can be 
 virtual frame represent source-level frames, which means if methods is inlined, 
 there will be single physical frame and many virtual frames
 
-=== physical frame
+=== method data & method counters
 
-* pointer to a stack
-* pointer to next instruction
-* pointer to code (aka `CodeBlob`) that "owns" instruction
-* deoptimization status
-
+=== on-stack replacement
 
 
