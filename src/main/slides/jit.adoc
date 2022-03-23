@@ -74,7 +74,7 @@ Execution starts at level 0 (interpreter), then the policy can decide either to 
 
 === !
 
-1. The length of the C2 queue determines the next level. The observation is that level 2 is generally faster than level 3 by about 30%, therefore we would want to minimize the time a method spends at level 3. We should only spend the time at level 3 that is necessary to get adequate profiling. So, if the C2 queue is long enough it is more beneficial to go first to level 2, because if we transitioned to level 3 we would be stuck there until our C2 compile request makes its way through the long queue. When the load on C2 recedes we are going to recompile at level 3 and start gathering profiling information.
+The length of the C2 queue determines the next level. The observation is that level 2 is generally faster than level 3 by about 30%, therefore we would want to minimize the time a method spends at level 3. We should only spend the time at level 3 that is necessary to get adequate profiling. So, if the C2 queue is long enough it is more beneficial to go first to level 2, because if we transitioned to level 3 we would be stuck there until our C2 compile request makes its way through the long queue. When the load on C2 recedes we are going to recompile at level 3 and start gathering profiling information.
 
 === queue? not again
 
@@ -90,3 +90,24 @@ there are few components shared by both compilers, +
 when compilation policy decides that method should be compiled, it puts a method (a compile task) onto one of the queues
 
 by default C1 queue has one worker threads and C2 has two (it all depends on your machine)
+
+=== !
+
+The length of C1 queue is used to dynamically adjust the thresholds, so as to introduce additional filtering if the compiler is overloaded. The rationale is that by the time a method gets compiled it can become unused, so it doesn't make sense to put too much onto the queue.
+ 
+=== !
+
+After profiling is completed at level 3 the transition is made to level 4. Again, the length of the C2 queue is used as a feedback to adjust the thresholds.
+After the first C1 compile some basic information is determined about the code like the number of the blocks and the number of the loops. Based on that it can be decided that a method is trivial and compiling it with C1 will yield the same code. In this case the method is compiled at level 1 instead of 4.
+
+=== blocks?
+
+back to school
+
+one form of representation of program is CFG (control flow graph)
+
+=== !
+
+[quote,,Wikipedia]
+    In a control-flow graph each node in the graph represents a basic block, i.e. a straight-line piece of code without any jumps or jump targets; jump targets start a block, and jumps end a block. Directed edges are used to represent jumps in the control flow. There are, in most presentations, two specially designated blocks: the entry block, through which control enters into the flow graph, and the exit block, through which all control flow leaves
+
