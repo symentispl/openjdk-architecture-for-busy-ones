@@ -11,4 +11,82 @@
 * OSR -> jak to podmiana działa ( napisz benchmar z while true)
 * register allocation & inline
 
+=== a few words about JIT
+
+JIT (just-in-time compiler) in JVM was a major step in the world of JITs
+
+* profile guided optimizations
+* speculating compilation (with traps and deoptimizations)
+* actually two not one compiler
+* on-stack replacement
+* used SSA (single static assigment) form (using "sea of nodes" developed by Cliff Click)
+
 === !
+
+we are not going to dive into implemented optimizations, +
+register allocations, +
+escape analisys, +
+inlining
+
+will focus on JIT infrastructure code
+
+=== need for speed
+
+=== !
+
+so, who decides when code gets compiled? +
+(and deoptimized)
+
+`src/hotspot/share/compiler/compilationPolicy.hpp`
+
+let's disassemble the first parts
+
+=== !
+
+The system supports 5 execution levels:
+
+* level 0 - interpreter
+* level 1 - C1 with full optimization (no profiling)
+* level 2 - C1 with invocation and backedge counters
+* level 3 - C1 with full profiling (level 2 + MDO)
+* level 4 - C2
+
+=== !
+
+Levels 0, 2 and 3 periodically notify the runtime about the current value of the counters (invocation counters and backedge counters). The frequency of these notifications is different at each level. These notifications are used by the policy to decide what transition to make.
+
+=== backedge counters
+
+invocation counter are pretty obvious 
+
+what the hell is backedge counter?
+
+[source,java]
+----
+for(;;){
+
+} // increment backedge counter
+----
+
+=== !
+
+Execution starts at level 0 (interpreter), then the policy can decide either to compile the method at level 3 or level 2. The decision is based on the following factors:
+
+=== !
+
+1. The length of the C2 queue determines the next level. The observation is that level 2 is generally faster than level 3 by about 30%, therefore we would want to minimize the time a method spends at level 3. We should only spend the time at level 3 that is necessary to get adequate profiling. So, if the C2 queue is long enough it is more beneficial to go first to level 2, because if we transitioned to level 3 we would be stuck there until our C2 compile request makes its way through the long queue. When the load on C2 recedes we are going to recompile at level 3 and start gathering profiling information.
+
+=== queue? not again
+
+there are few components shared by both compilers, +
+`src/hotspot/share/compiler/compileBroker.hpp`:
+
+* CompileQueue
+* CompileTask
+* CompileBroker
+
+=== !
+
+when compilation policy decides that method should be compiled, it puts a method (a compile task) onto one of the queues
+
+by default C1 queue has one worker threads and C2 has two (it all depends on your machine)
