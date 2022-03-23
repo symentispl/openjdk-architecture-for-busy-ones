@@ -5,7 +5,14 @@ The problem is there!
 
 Heap is initilized during creating the Universe. 
 
+
 ==== GC 
+Algorithm is choose during creating the Universe
+
+===== But sometimes is different than we expect 
+
+Ergo, ergo, ergo.. 
+
 // init globals 
 // universe init
 // initialize_global_behaviours
