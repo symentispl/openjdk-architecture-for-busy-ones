@@ -4,6 +4,7 @@ The problem is there!
 === heap
 
 Heap is initilized during creating the Universe. 
+
 ==== GC 
 // init globals 
 // universe init
