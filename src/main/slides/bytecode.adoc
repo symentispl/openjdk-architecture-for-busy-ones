@@ -1,7 +1,19 @@
-== loading and verifying bytecode
+== classloaders 
+* bootstrap 
+* runtime 
+* application 
 
-bootstrap classloader (ładowanie class)
+=== loading and veryfining bytecode (TODO)
+TODO 
 
-* gdzie ten kod ląduje (metaspace) Klass
-* weryfikacja gdzie too w kodzie, co robi (po co)
-* stackmap
+=== storage 
+TODO
+
+=== verification
+TODO 
+
+==== check constraints
+TODO
+
+=== stackmap 
+TODO
