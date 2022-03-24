@@ -8,3 +8,4 @@
     ./configure // make sure your java points to JDK 17 or 16, this is required for boot JDK
     make images
     make vscode-project // import project workspace into VSCode
+

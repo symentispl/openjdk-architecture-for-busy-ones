@@ -1,19 +1,26 @@
 == classloaders 
+
 * bootstrap 
 * runtime 
 * application 
 
 === loading and veryfining bytecode (TODO)
+
 TODO 
 
 === storage 
+
 TODO
 
 === verification
+
 TODO 
 
-==== check constraints
+=== check constraints
+
 TODO
 
 === stackmap 
+
 TODO
+

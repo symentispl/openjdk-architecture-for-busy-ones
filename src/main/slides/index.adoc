@@ -13,7 +13,7 @@ Architektura OpenJDK dla upartych
 :imagesdir: images
 :customcss: css/custom.css
 :mmdc: node_modules/.bin/mmdc
-
+:title-slide-background-image: pexels-pixabay-159275.jpg
 
 == about us
 
