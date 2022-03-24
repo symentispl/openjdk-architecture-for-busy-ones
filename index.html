@@ -430,15 +430,23 @@ and into concurrent phases.</p></div>
 <div class="paragraph"><p>per-thread processing</p></div>
 <h5>The only activities still done in GC safepoints are a subset of root processing and a time-bounded marking termination operation.</h5>
 <h5>Project Loom</h5><div class="paragraph"><p>It necessary for Project Loom for lazy stack processing</p></div></div></section></section>
-<section><section id="classloaders"><h2>classloaders</h2><div class="slide-content"><div class="paragraph"><p>bootstrap, runtime, application</p></div></div></section><section id="universe_post_init"><h2>universe_post_init</h2></section><section id="initialization"><h2>initialization</h2><div class="slide-content"><div class="literalblock"><div class="content"><pre> Make sure klass is linked (verified) before initialization A class could already be verified, since it has been reflected upon.
-=== linking</pre></div></div>
+<section><section id="classloaders"><h2>classloaders</h2><div class="slide-content"><div class="paragraph"><p>bootstrap, runtime, application</p></div><div class="paragraph"><p>src/hotspot/share/runtime/init.cpp</p></div><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">jint init_globals() {
+  ...
+  classLoader_init1();
+  ...
+}</code></pre></div></div></div></section><section id="universe_post_init"><h2>universe_post_init</h2><div class="slide-content"><div class="paragraph"><p>src/hotspot/share/memory/universe.cpp</p></div></div></section><section id="initialization"><h2>initialization</h2><div class="slide-content"><div class="paragraph"><p>Make sure klass is linked (verified) before initialization A class could already be verified, since it has been reflected upon.</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>src/hotspot/share/oops/instanceKlass.cpp</p></div>
 <div class="paragraph"><p>VM treats linking as verification class.</p></div>
 <div class="paragraph"><p>If class is already linked then it&#8217;s not necessary.</p></div>
-<h3>all interfaces implemented by this class must linking before this class</h3>
+<h3>all interfaces implemented by this class must linking before this class</h3><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">  Array&lt;InstanceKlass*&gt;* interfaces = local_interfaces();
+  int num_interfaces = interfaces-&gt;length();
+  for (int index = 0; index &lt; num_interfaces; index++) {
+    InstanceKlass* interk = interfaces-&gt;at(index);
+    interk-&gt;link_class_impl(CHECK_false);
+  }</code></pre></div></div>
 <h3>Linking with verfication together</h3>
-<h3>verfication bytecode</h3><div class="paragraph"><p>ClassVerifier::verify_class</p></div>
+<h3>verfication bytecode</h3>
 <h3>check constraints</h3>
-<h3>vTable</h3><div class="literalblock"><div class="content"><pre>Initialize the vtable and interface table after methods have been rewritten since rewrite may fabricate new methods also does loader constraint checking</pre></div></div></div></section><section id="store_all_data_in_code_cache"><h2>Store all data in code cache</h2></section><section id="stackmap"><h2>stackmap</h2><div class="slide-content"><div class="paragraph"><p>Each stack_map_frame structure specifies the type state at a particular bytecode offset.
+<h3>vTable</h3><div class="paragraph"><p>Initialize the vtable and interface table after methods have been rewritten since rewrite may fabricate new methods also does loader constraint checking</p></div></div></section><section id="stackmap"><h2>stackmap</h2><div class="slide-content"><div class="paragraph"><p>Each stack_map_frame structure specifies the type state at a particular bytecode offset.
 == bytecode interpreter</p></div>
 <div class="ulist"><ul><li><p>bytecode interpreter and generator interpreter</p></li><li><p>method calls and entry points</p></li><li><p>exception handling</p></li><li><p>object allocation and cooperation with GC</p></li><li><p>stack &amp; local var table</p></li><li><p>physical and virtual frames</p></li><li><p>const method, method data and method counters</p></li></ul></div></div></section></section>
 <section><section id="jvm_interpreter"><h2>JVM interpreter</h2><div class="slide-content"><div class="paragraph"><p>this isn&#8217;t actual all that simple, because we have two different interpreters</p></div><div class="ulist"><ul><li><p>high level language version (aka c++ interpreter), actual interpretation of bytecodes,</p></li><li><p>assembly language version (aka template interpreter), generation of assembly code that creates and manages interpreter runtime frames</p></li></ul></div></div></section><section><div class="slide-content"><div class="paragraph"><p>src/hotspot/share/interpreter/abstractInterpreter.hpp</p></div>
@@ -553,24 +561,55 @@ inlining</p></div>
 <div class="paragraph"><p>by default C1 queue has one worker threads and C2 has two (it all depends on your machine)</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>The length of C1 queue is used to dynamically adjust the thresholds, so as to introduce additional filtering if the compiler is overloaded. The rationale is that by the time a method gets compiled it can become unused, so it doesn&#8217;t make sense to put too much onto the queue.</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>After profiling is completed at level 3 the transition is made to level 4. Again, the length of the C2 queue is used as a feedback to adjust the thresholds.
 After the first C1 compile some basic information is determined about the code like the number of the blocks and the number of the loops. Based on that it can be decided that a method is trivial and compiling it with C1 will yield the same code. In this case the method is compiled at level 1 instead of 4.</p></div></div></section><section id="blocks"><h2>blocks?</h2><div class="slide-content"><div class="paragraph"><p>back to school</p></div>
 <div class="paragraph"><p>one form of representation of program is CFG (control flow graph)</p></div></div></section><section><div class="slide-content"><div class="quoteblock"><blockquote>    In a control-flow graph each node in the graph represents a basic block, i.e. a straight-line piece of code without any jumps or jump targets; jump targets start a block, and jumps end a block. Directed edges are used to represent jumps in the control flow. There are, in most presentations, two specially designated blocks: the entry block, through which control enters into the flow graph, and the exit block, through which all control flow leaves</blockquote><div class="attribution"><cite>Wikipedia</cite></div></div></div></section></section>
-<section><section id="heap"><h2>heap</h2><div class="slide-content"><div class="paragraph"><p>Heap is initilized during creating the Universe.</p></div></div></section><section id="gc"><h2>GC</h2><div class="slide-content"><div class="paragraph"><p>Algorithm is choose during creating the Universe</p></div>
-<h3>But sometimes is different than we expect</h3><div class="paragraph"><p>Ergo, ergo, ergo..</p></div></div></section><section id="roots"><h2>roots</h2><div class="slide-content"><div class="paragraph"><p>Root is basic concept in GC cycle</p></div>
-<div class="paragraph"><p>Root is thread, local variables, static fields, final fields.</p></div>
-<h3>VM threads are roots</h3></div></section><section id="bariers"><h2>bariers</h2><div class="slide-content"><div class="paragraph"><p>Barriers need JIT help without JIT barriers can be useful.</p></div>
-<h3>G1, Shendandoah, ZGC</h3><div class="paragraph"><p>Only these GCs use barriers</p></div>
-<h3>Barrier</h3><div class="paragraph"><p>Barrier is simple assmebly code injected in particular place
+<section><section id="heap"><h2>heap</h2><div class="slide-content"><div class="paragraph"><p>Heap is initilized during creating the Universe.</p></div></div></section><section id="gc" data-background-image="https://media4.giphy.com/media/njZPp4pQ0g4fe/giphy.gif"><h2>GC</h2><div class="slide-content"><div class="paragraph"><p>Algorithm is choose during creating the Universe</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>But sometimes is different than we expect</p></div>
+<div class="paragraph"><p>Ergo, ergo, ergo..</p></div></div></section><section id="roots"><h2>roots</h2><div class="slide-content"><div class="paragraph"><p>Root is basic concept in GC cycle</p></div>
+<div class="paragraph"><p>Root is thread, local variables, static fields, final fields.</p></div></div></section><section id="vm_threads_are_roots"><h2>VM threads are roots</h2></section><section id="bariers" data-background-image="https://media2.giphy.com/media/wLJSjc5fzMJtS/giphy.gif"><h2>bariers</h2><div class="slide-content"><div class="paragraph"><p>Barriers need JIT help for speed</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>G1, Shendandoah, ZGC</p></div>
+<div class="paragraph"><p>Only these GCs use barriers</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Barriers</p></div>
+<div class="paragraph"><p>Barrier is simple assmebly code injected in particular place
 G1 uses load/store (aka read/write) barriers
 Shenandoah and ZGC uses load barrier</p></div>
-<div class="paragraph"><p>TODO wrzuc przyklad asseemblera</p></div></div></section><section id="card_table"><h2>card table</h2><div class="slide-content"><div class="paragraph"><p>After creating heap starting process to collecting heap.
-Card table needs additional memory space, if doesn&#8217;t VM exit</p></div></div></section><section id="tlab"><h2>TLAB</h2><div class="slide-content"><div class="paragraph"><p>Thread Local Allocation Buffer</p></div>
-<h3>Each thread has own space to allocate</h3><div class="paragraph"><p>If object is too big then allocation is outside of TLAB</p></div>
-<h3>Outside TLAB allocation</h3><div class="paragraph"><p>We need take slow path it means</p></div>
-<h3>TLAB Size</h3><div class="paragraph"><p>During starting the Universe then TLAB size is calculated</p></div>
-<h3>TLAB Size recalculting</h3><div class="paragraph"><p>Every FullGC</p></div>
-<h3>Take off TLAB</h3><div class="paragraph"><p>It not good idea</p></div>
-<h4>JIT</h4><div class="paragraph"><p>If C2 is enabled extra space is needed otherwise prefetching instructions generated by the C2
+<div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-assembly hljs" data-noescape="true" data-lang="assembly">0x00007fabf9777f48:   mov    -0x28(%rbp),%rbx
+0x00007fabf9777f4c:   test   %rbx,%rbx
+0x00007fabf9777f4f:   je     0x00007fabf9777fdc</code></pre></div></div></div></section><section id="card_table"><h2>card table</h2><div class="slide-content"><div class="paragraph"><p>After creating heap starting process to collecting heap.
+Card table needs additional memory space, if doesn&#8217;t VM exit</p></div></div></section><section data-background-image="https://media2.giphy.com/media/kf4SXNzSfiAiQ/giphy.gif"><div class="slide-content"><div class="paragraph"><p>TLAB</p></div>
+<div class="paragraph"><p>Thread Local Allocation Buffer</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Each thread has own space to allocate</p></div>
+<div class="paragraph"><p>If object is too big then allocation is outside of TLAB</p></div>
+<div class="listingblock"><div class="content"><pre>// Load the current thread-local allocation pointer
+mov     0x118(%r15),%rax
+
+// Compute new thread-local allocation pointer by adding allocation size (16 bytes)
+mov     %rax,%r10
+add     $0x10,%r10</pre></div></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Outside TLAB allocation (aka global allocation)</p></div>
+<div class="paragraph"><p>We need take slow path it means</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>TLAB Size</p></div>
+<div class="paragraph"><p>During starting the Universe then TLAB size is calculated</p></div>
+<div class="paragraph"><p>src/hotspot/share/gc/shared/threadLocalAllocBuffer.cpp</p></div>
+<div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">size_t ThreadLocalAllocBuffer::initial_desired_size() {
+  size_t init_sz = 0;
+
+  if (TLABSize &gt; 0) {
+    init_sz = TLABSize / HeapWordSize;
+  } else {
+
+    unsigned int nof_threads = ThreadLocalAllocStats::allocating_threads_avg();
+
+    init_sz  = (Universe::heap()-&gt;tlab_capacity(thread()) / HeapWordSize) /
+                      (nof_threads * target_refills());
+    init_sz = align_object_size(init_sz);
+  }
+  init_sz = MIN2(MAX2(init_sz, min_size()), max_size());
+  return init_sz;
+}</code></pre></div></div></div></section><section><div class="slide-content"><div class="paragraph"><p>TLAB Size recalculting</p></div>
+<div class="paragraph"><p>Every FullGC</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Take off TLAB</p></div>
+<div class="paragraph"><p>It not good idea</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>JIT</p></div>
+<div class="paragraph"><p>If C2 is enabled extra space is needed otherwise prefetching instructions generated by the C2
 compiler will fault</p></div>
-<h3>Retrie TLAB</h3><div class="paragraph"><p>GC can retire TLAB space but only
+<div class="paragraph"><p>src/hotspot/share/gc/g1/c1
+src/hotspot/share/gc/g1/c2</p></div>
+<div class="paragraph"><p>src/hotspot/share/gc/shenandoah/c1
+src/hotspot/share/gc/shenandoah/c2</p></div>
+<div class="paragraph"><p>src/hotspot/share/gc/z/c1
+src/hotspot/share/gc/z/c2</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Retrie TLAB</p></div>
+<div class="paragraph"><p>GC can retire TLAB space but only
 ZGC and Shenandoah retries space during concurrent stack processing</p></div></div></section></section></div></div><script src="reveal.js/js/reveal.js"></script><script>Array.prototype.slice.call(document.querySelectorAll('.slides section')).forEach(function(slide) {
   if (slide.getAttribute('data-background-color')) return;
   // user needs to explicitly say he wants CSS color to override otherwise we might break custom css or theme (#226)
