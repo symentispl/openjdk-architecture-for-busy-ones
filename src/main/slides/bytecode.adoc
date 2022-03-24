@@ -1,19 +1,42 @@
 == classloaders 
-* bootstrap 
-* runtime 
-* application 
 
-=== loading and veryfining bytecode (TODO)
-TODO 
+bootstrap, runtime, application 
 
-=== storage 
-TODO
+=== universe_post_init
 
-=== verification
-TODO 
+=== initialization  
 
-==== check constraints
-TODO
+ Make sure klass is linked (verified) before initialization A class could already be verified, since it has been reflected upon.
+=== linking
+
+VM treats linking as verification class. 
+
+If class is already linked then it's not necessary. 
+
+==== all interfaces implemented by this class must linking before this class
+// 
+// InstanceKlass::link_class_impl(TRAPS) 
+==== Linking with verfication together
+
+==== verfication bytecode 
+
+// Verifier::verify
+ClassVerifier::verify_class
+
+==== check constraints 
+// SystemDictionaryShared::check_linking_constraints
+==== vTable 
+ Initialize the vtable and interface table after methods have been rewritten since rewrite may fabricate new methods also does loader constraint checking
+
+
+// initialize_impl
+// void InstanceKlass::link_class(TRAPS) {
+// bool InstanceKlass::link_class_or_fail(TRAPS) {
+// void InstanceKlass::eager_initialize(Thread *thread) {
+
+
+=== Store all data in code cache
 
 === stackmap 
-TODO
+
+Each stack_map_frame structure specifies the type state at a particular bytecode offset. 
