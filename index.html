@@ -403,7 +403,7 @@ TeX: { equationNumbers: { autoNumber: "none" } }
 link.rel = 'stylesheet';
 link.type = 'text/css';
 link.href = window.location.search.match( /print-pdf/gi ) ? "reveal.js/css/print/pdf.css" : "reveal.js/css/print/paper.css";
-document.getElementsByTagName( 'head' )[0].appendChild( link );</script><link rel="stylesheet" href="css/custom.css"></head><body><div class="reveal"><div class="slides"><section class="title" data-state="title"><h1>Jakże vspaniała maszyna</h1><p class="author"><small>Architektura OpenJDK dla upartych</small></p></section><section><section id="about_us"><h2>about us</h2></section><section id="krystian_zybała"><h2>Krystian Zybała</h2></section><section id="jarosław_pałka"><h2>Jarosław Pałka</h2><div class="slide-content"><div class="paragraph"><p>Neo4j (a graph database) performance engineer</p></div>
+document.getElementsByTagName( 'head' )[0].appendChild( link );</script><link rel="stylesheet" href="css/custom.css"></head><body><div class="reveal"><div class="slides"><section class="title" data-state="title" data-background-image="images/pexels-pixabay-159275.jpg"><h1>Jakże vspaniała maszyna</h1><p class="author"><small>Architektura OpenJDK dla upartych</small></p></section><section><section id="about_us"><h2>about us</h2></section><section id="krystian_zybała"><h2>Krystian Zybała</h2></section><section id="jarosław_pałka"><h2>Jarosław Pałka</h2><div class="slide-content"><div class="paragraph"><p>Neo4j (a graph database) performance engineer</p></div>
 <div class="paragraph"><p>over 20 years with JVM,<br>
 since early days of no native threads and,<br>
 no JIT and slow as hell GC</p></div>
@@ -411,13 +411,13 @@ no JIT and slow as hell GC</p></div>
 <div class="paragraph"><p>founder of SegFault conference<br>
 godfather of Programistyczna Grupa Rozwoju</p></div></div></section><section id="abstract"><h2>abstract</h2><div class="slide-content"><div class="ulist"><ul><li><p>JVM initialization</p></li><li><p>loading and verifying bytecode</p></li><li><p>bytecode interpreter</p></li><li><p>time for just-in-time compiler</p></li><li><p>garbage collector black magic</p></li></ul></div></div></section></section>
 <section id="introduction_to_openjdk"><h2>Introduction to OpenJDK</h2></section>
-<section><section id="if_you_want_to_follow_along"><h2>if you want to follow along</h2><div class="slide-content"><div class="literalblock"><div class="content"><pre>    git clone https://github.com/openjdk/jdk17
-    cd jdk17
-    chmod +x configure
-    ./configure // make sure your java points to JDK 17 or 16, this is required for boot JDK
-    make images
-    make vscode-project // import project workspace into VSCode
-== JVM initialization</pre></div></div></div></section><section id="oopmaps"><h2>OopMaps</h2></section><section id="safepoint"><h2>safepoint</h2></section><section id="stack_processing"><h2>stack processing</h2><div class="slide-content"><div class="paragraph"><p>During safepoint each thread stack is processing</p></div>
+<section id="if_you_want_to_follow_along"><h2>if you want to follow along</h2><div class="slide-content"><div class="literalblock"><div class="content"><pre>git clone https://github.com/openjdk/jdk17
+cd jdk17
+chmod +x configure
+./configure // make sure your java points to JDK 17 or 16, this is required for boot JDK
+make images
+make vscode-project // import project workspace into VSCode</pre></div></div></div></section>
+<section><section id="jvm_initialization"><h2>JVM initialization</h2></section><section id="oopmaps"><h2>OopMaps</h2></section><section id="safepoint"><h2>safepoint</h2></section><section id="stack_processing"><h2>stack processing</h2><div class="slide-content"><div class="paragraph"><p>During safepoint each thread stack is processing</p></div>
 <h3>Always process three frames when starting an iteration.</h3>
 <h3>JEP-376</h3><div class="paragraph"><p>Concurrent Thread-Stack Processing</p></div>
 <h4>Remove thread-stack processing from ZGC safepoints.</h4><div class="paragraph"><p>It also available in Shenandoah</p></div>
@@ -446,9 +446,8 @@ and into concurrent phases.</p></div>
 <h3>Linking with verfication together</h3>
 <h3>verfication bytecode</h3>
 <h3>check constraints</h3>
-<h3>vTable</h3><div class="paragraph"><p>Initialize the vtable and interface table after methods have been rewritten since rewrite may fabricate new methods also does loader constraint checking</p></div></div></section><section id="stackmap"><h2>stackmap</h2><div class="slide-content"><div class="paragraph"><p>Each stack_map_frame structure specifies the type state at a particular bytecode offset.
-== bytecode interpreter</p></div>
-<div class="ulist"><ul><li><p>bytecode interpreter and generator interpreter</p></li><li><p>method calls and entry points</p></li><li><p>exception handling</p></li><li><p>object allocation and cooperation with GC</p></li><li><p>stack &amp; local var table</p></li><li><p>physical and virtual frames</p></li><li><p>const method, method data and method counters</p></li></ul></div></div></section></section>
+<h3>vTable</h3><div class="paragraph"><p>Initialize the vtable and interface table after methods have been rewritten since rewrite may fabricate new methods also does loader constraint checking</p></div></div></section><section id="stackmap"><h2>stackmap</h2><div class="slide-content"><div class="paragraph"><p>Each stack_map_frame structure specifies the type state at a particular bytecode offset.</p></div></div></section></section>
+<section id="bytecode_interpreter"><h2>bytecode interpreter</h2><div class="slide-content"><div class="ulist"><ul><li><p>bytecode interpreter and generator interpreter</p></li><li><p>method calls and entry points</p></li><li><p>exception handling</p></li><li><p>object allocation and cooperation with GC</p></li><li><p>stack &amp; local var table</p></li><li><p>physical and virtual frames</p></li><li><p>const method, method data and method counters</p></li></ul></div></div></section>
 <section><section id="jvm_interpreter"><h2>JVM interpreter</h2><div class="slide-content"><div class="paragraph"><p>this isn&#8217;t actual all that simple, because we have two different interpreters</p></div><div class="ulist"><ul><li><p>high level language version (aka c++ interpreter), actual interpretation of bytecodes,</p></li><li><p>assembly language version (aka template interpreter), generation of assembly code that creates and manages interpreter runtime frames</p></li></ul></div></div></section><section><div class="slide-content"><div class="paragraph"><p>src/hotspot/share/interpreter/abstractInterpreter.hpp</p></div>
 <div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">// This file contains the platform-independent parts
 // of the abstract interpreter and the abstract interpreter generator.
@@ -547,7 +546,7 @@ there will be single physical frame and many virtual frames</p></div></div></sec
 register allocations,<br>
 escape analisys,<br>
 inlining</p></div>
-<div class="paragraph"><p>will focus on JIT infrastructure code</p></div></div></section><section id="need_for_speed"><h2>need for speed</h2></section><section><div class="slide-content"><div class="paragraph"><p>so, who decides when code gets compiled?<br>
+<div class="paragraph"><p>will focus on JIT infrastructure code</p></div></div></section><section id="need_for_speed" class="highlight_section_title" data-background-image="https://media.giphy.com/media/xTiTnFM0Cr2xcGUsVy/giphy.gif"><h2>need for speed</h2></section><section><div class="slide-content"><div class="paragraph"><p>so, who decides when code gets compiled?<br>
 (and deoptimized)</p></div>
 <div class="paragraph"><p><code>src/hotspot/share/compiler/compilationPolicy.hpp</code></p></div>
 <div class="paragraph"><p>let&#8217;s disassemble the first parts</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>The system supports 5 execution levels:</p></div>
@@ -560,8 +559,83 @@ inlining</p></div>
 <div class="ulist"><ul><li><p>CompileQueue</p></li><li><p>CompileTask</p></li><li><p>CompileBroker</p></li></ul></div></div></section><section><div class="slide-content"><div class="paragraph"><p>when compilation policy decides that method should be compiled, it puts a method (a compile task) onto one of the queues</p></div>
 <div class="paragraph"><p>by default C1 queue has one worker threads and C2 has two (it all depends on your machine)</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>The length of C1 queue is used to dynamically adjust the thresholds, so as to introduce additional filtering if the compiler is overloaded. The rationale is that by the time a method gets compiled it can become unused, so it doesn&#8217;t make sense to put too much onto the queue.</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>After profiling is completed at level 3 the transition is made to level 4. Again, the length of the C2 queue is used as a feedback to adjust the thresholds.
 After the first C1 compile some basic information is determined about the code like the number of the blocks and the number of the loops. Based on that it can be decided that a method is trivial and compiling it with C1 will yield the same code. In this case the method is compiled at level 1 instead of 4.</p></div></div></section><section id="blocks"><h2>blocks?</h2><div class="slide-content"><div class="paragraph"><p>back to school</p></div>
-<div class="paragraph"><p>one form of representation of program is CFG (control flow graph)</p></div></div></section><section><div class="slide-content"><div class="quoteblock"><blockquote>    In a control-flow graph each node in the graph represents a basic block, i.e. a straight-line piece of code without any jumps or jump targets; jump targets start a block, and jumps end a block. Directed edges are used to represent jumps in the control flow. There are, in most presentations, two specially designated blocks: the entry block, through which control enters into the flow graph, and the exit block, through which all control flow leaves</blockquote><div class="attribution"><cite>Wikipedia</cite></div></div></div></section></section>
-<section><section id="heap"><h2>heap</h2><div class="slide-content"><div class="paragraph"><p>Heap is initilized during creating the Universe.</p></div></div></section><section id="gc" data-background-image="https://media4.giphy.com/media/njZPp4pQ0g4fe/giphy.gif"><h2>GC</h2><div class="slide-content"><div class="paragraph"><p>Algorithm is choose during creating the Universe</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>But sometimes is different than we expect</p></div>
+<div class="paragraph"><p>one form of representation of program is CFG (control flow graph)</p></div></div></section><section><div class="slide-content"><div class="quoteblock"><blockquote>    In a control-flow graph each node in the graph represents a basic block, i.e. a straight-line piece of code without any jumps or jump targets; jump targets start a block, and jumps end a block. Directed edges are used to represent jumps in the control flow. There are, in most presentations, two specially designated blocks: the entry block, through which control enters into the flow graph, and the exit block, through which all control flow leaves</blockquote><div class="attribution"><cite>Wikipedia</cite></div></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Command line options:
+- <code>Tier?InvokeNotifyFreqLog</code> and <code>Tier?BackedgeNotifyFreqLog</code> control the frequency of method invocation and backedge notifications. Basically every n-th invocation or backedge a mutator thread makes a call into the runtime.</p></div>
+<div class="ulist"><ul><li><p><code>Tier?InvocationThreshold</code>, <code>Tier?CompileThreshold</code>, <code>Tier?BackEdgeThreshold</code>, <code>Tier?MinInvocationThreshold</code> control compilation thresholds.
+Level 2 thresholds are not used and are provided for option-compatibility and potential future use.</p></li></ul></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Other thresholds work as follows:
+Transition from interpreter (level 0) to C1 with full profiling (level 3) happens when the following predicate is true (X is the level):</p></div>
+<div class="literalblock"><div class="content"><pre>i &gt; TierXInvocationThreshold * s || (i &gt; TierXMinInvocationThreshold * s  &amp;&amp; i + b &gt; TierXCompileThreshold * s),</pre></div></div>
+<div class="paragraph"><p>where $i$ is the number of method invocations, $b$ number of backedges and $s$ is the scaling coefficient that will be discussed further.</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>The intuition is to equalize the time that is spend profiling each method.
+The same predicate is used to control the transition from level 3 to level 4 (C2). It should be noted though that the thresholds are relative. Moreover i and b for the 0&#8594;3 transition come from Method* and for 3&#8594;4 transition they come from MDO (since profiled invocations are counted separately). Finally, if a method does not contain anything worth profiling, a transition from level 3 to level 4 occurs without considering thresholds (e.g., with fewer invocations than what is specified by Tier4InvocationThreshold).</p></div></div></section><section id="method_and_mdo"><h2>Method* and MDO</h2><div class="slide-content"><div class="paragraph"><p><code>Method</code> is a JVM class which models bytecode method</p></div>
+<div class="paragraph"><p><code>src/hotspot/share/oops/method.hpp</code></p></div>
+<div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">class Method : public Metadata {
+ friend class VMStructs;
+ friend class JVMCIVMStructs;
+ private:
+  // If you add a new field that points to any metaspace object, you
+  // must add this field to Method::metaspace_pointers_do().
+  ConstMethod*      _constMethod;                // Method read-only data.
+  MethodData*       _method_data;
+  MethodCounters*   _method_counters;
+}</code></pre></div></div></div></section><section><div class="slide-content"><div class="paragraph"><p>MDO are instances of <code>MethodData</code>,<br>
+which are only use at compilation level 3,<br>
+so they are not always available<br>
+(your intuition is right C2 methods don&#8217;t have profilers)</p></div></div></section><section><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">class MethodCounters : public Metadata {
+ friend class VMStructs;
+ friend class JVMCIVMStructs;
+ private:
+  InvocationCounter _invocation_counter;         // Incremented before each activation of the method - used to trigger frequency-based optimizations
+  InvocationCounter _backedge_counter;           // Incremented before each backedge taken - used to trigger frequency-based optimizations
+  jlong             _prev_time;                   // Previous time the rate was acquired
+  float             _rate;                        // Events (invocation and backedge counter increments) per millisecond
+  int               _nmethod_age;
+  int               _invoke_mask;                 // per-method Tier0InvokeNotifyFreqLog
+  int               _backedge_mask;               // per-method Tier0BackedgeNotifyFreqLog
+  int               _prev_event_count;            // Total number of events saved at previous callback
+#if COMPILER2_OR_JVMCI
+  u2                _interpreter_throwout_count; // Count of times method was exited via exception while interpreting
+#endif
+#if INCLUDE_JVMTI
+  u2                _number_of_breakpoints;      // fullspeed debugging support
+#endif
+  // NMethod age is a counter for warm methods detection in the code cache sweeper.
+  // The counter is reset by the sweeper and is decremented by some of the compiled
+  // code. The counter values are interpreted as follows:
+  // 1. (HotMethodDetection..INT_MAX] - initial value, no counters inserted
+  // 2. [1..HotMethodDetectionLimit)  - the method is warm, the counter is used
+  //                                    to figure out which methods can be flushed.
+  // 3. (INT_MIN..0]                  - method is hot and will deopt and get
+  //                                    recompiled without the counters
+  u1                _highest_comp_level;          // Highest compile level this method has ever seen.
+  u1                _highest_osr_comp_level;      // Same for OSR level</code></pre></div></div></div></section><section id="methoddata"><h2>MethodData</h2><div class="slide-content"><div class="paragraph"><p><code>MethodCounter</code> has really basic profiling information (only counters),<br>
+the magic is in <code>MethodData</code></p></div>
+<div class="paragraph"><p><code>src/hotspot/share/oops/methodData.hpp</code></p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>The MethodData object collects counts and other profile information
+during zeroth-tier (interpretive) and first-tier execution.
+The profile is used later by compilation heuristics.  Some heuristics
+enable use of aggressive (or "heroic") optimizations.  An aggressive
+optimization often has a down-side, a corner case that it handles
+poorly, but which is thought to be rare.  The profile provides
+evidence of this rarity for a given method or even BCI.  It allows
+the compiler to back out of the optimization at places where it
+has historically been a poor choice.  Other heuristics try to use
+specific information gathered about types observed at a given site.</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>All data in the profile is approximate.  It is expected to be accurate
+on the whole, but the system expects occasional inaccuraces, due to
+counter overflow, multiprocessor races during data collection, space
+limitations, missing MDO blocks, etc.  Bad or missing data will degrade
+optimization quality but will not affect correctness.  Also, each MDO
+is marked with its birth-date ("creation_mileage") which can be used
+to assess the quality ("maturity") of its data.</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Short (&lt;32-bit) counters are designed to overflow to a known "saturated"
+state.  Also, certain recorded per-BCI events are given one-bit counters
+which overflow to a saturated state which applied to all counters at
+that BCI.  In other words, there is a small lattice which approximates
+the ideal of an infinite-precision counter for each event at each BCI,
+and the lattice quickly "bottoms out" in a state where all counters
+are taken to be indefinitely large.</p></div>
+<div class="literalblock"><div class="content"><pre> The reader will find many data races in profile gathering code, starting
+ with invocation counter incrementation.  None of these races harm correct
+ execution of the compiled code.
+== heap</pre></div></div>
+<div class="paragraph"><p>Heap is initilized during creating the Universe.</p></div></div></section><section id="gc" data-background-image="https://media4.giphy.com/media/njZPp4pQ0g4fe/giphy.gif"><h2>GC</h2><div class="slide-content"><div class="paragraph"><p>Algorithm is choose during creating the Universe</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>But sometimes is different than we expect</p></div>
 <div class="paragraph"><p>Ergo, ergo, ergo..</p></div></div></section><section id="roots"><h2>roots</h2><div class="slide-content"><div class="paragraph"><p>Root is basic concept in GC cycle</p></div>
 <div class="paragraph"><p>Root is thread, local variables, static fields, final fields.</p></div></div></section><section id="vm_threads_are_roots"><h2>VM threads are roots</h2></section><section id="bariers" data-background-image="https://media2.giphy.com/media/wLJSjc5fzMJtS/giphy.gif"><h2>bariers</h2><div class="slide-content"><div class="paragraph"><p>Barriers need JIT help for speed</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>G1, Shendandoah, ZGC</p></div>
 <div class="paragraph"><p>Only these GCs use barriers</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Barriers</p></div>
