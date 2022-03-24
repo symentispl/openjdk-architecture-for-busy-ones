@@ -2,31 +2,66 @@
 
 bootstrap, runtime, application 
 
+src/hotspot/share/runtime/init.cpp
+
+[source,cpp]
+-----
+jint init_globals() {
+  ...
+  classLoader_init1();
+  ...
+}
+-----
+
 === universe_post_init
+
+src/hotspot/share/memory/universe.cpp
+
 
 === initialization  
 
- Make sure klass is linked (verified) before initialization A class could already be verified, since it has been reflected upon.
-=== linking
+Make sure klass is linked (verified) before initialization A class could already be verified, since it has been reflected upon.
+
+=== !
+
+// linking
+src/hotspot/share/oops/instanceKlass.cpp
 
 VM treats linking as verification class. 
 
 If class is already linked then it's not necessary. 
 
+
 ==== all interfaces implemented by this class must linking before this class
+
+[source,cpp]
+----
+  Array<InstanceKlass*>* interfaces = local_interfaces();
+  int num_interfaces = interfaces->length();
+  for (int index = 0; index < num_interfaces; index++) {
+    InstanceKlass* interk = interfaces->at(index);
+    interk->link_class_impl(CHECK_false);
+  }
+----
+
 // 
 // InstanceKlass::link_class_impl(TRAPS) 
 ==== Linking with verfication together
 
 ==== verfication bytecode 
 
+// src/hotspot/share/interpreter/abstractInterpreter.hpp
+
+
+
 // Verifier::verify
-ClassVerifier::verify_class
+// ClassVerifier::verify_class
 
 ==== check constraints 
 // SystemDictionaryShared::check_linking_constraints
 ==== vTable 
- Initialize the vtable and interface table after methods have been rewritten since rewrite may fabricate new methods also does loader constraint checking
+
+Initialize the vtable and interface table after methods have been rewritten since rewrite may fabricate new methods also does loader constraint checking
 
 
 // initialize_impl
@@ -34,8 +69,6 @@ ClassVerifier::verify_class
 // bool InstanceKlass::link_class_or_fail(TRAPS) {
 // void InstanceKlass::eager_initialize(Thread *thread) {
 
-
-=== Store all data in code cache
 
 === stackmap 
 
