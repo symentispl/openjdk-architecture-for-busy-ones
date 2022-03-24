@@ -90,7 +90,8 @@ Each stack processes concurrently
 
 ===== Provide a mechanism by which other HotSpot subsystems can lazily process stacks.
 
-===== Stack watermark 
+===== Stack watermark
+ 
 All GC operations that scale with the size of the heap and the size of metaspace out of safepoint operations
 and into concurrent phases.
 
