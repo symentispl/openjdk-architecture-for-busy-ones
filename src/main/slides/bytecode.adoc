@@ -80,5 +80,6 @@ Initialize the vtable and interface table after methods have been rewritten sinc
 
 === stackmap 
 
+Uses to preverification of Java classes  
 Each stack_map_frame structure specifies the type state at a particular bytecode offset. 
 
