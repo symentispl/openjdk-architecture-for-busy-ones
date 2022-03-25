@@ -2,7 +2,7 @@
 
 bootstrap, runtime, application 
 
-src/hotspot/share/runtime/init.cpp
+`src/hotspot/share/runtime/init.cpp`
 
 [source,cpp]
 -----

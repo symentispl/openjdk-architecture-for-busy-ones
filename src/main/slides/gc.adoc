@@ -188,7 +188,7 @@ size_t ThreadLocalAllocBuffer::initial_desired_size() {
 
 TLAB Size recalculting 
 
-Every FullGC 
+Every FullGC TLAB is resizing if needed 
 // ThreadLocalAllocBuffer::startup_initialization
 
 === !
