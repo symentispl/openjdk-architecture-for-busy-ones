@@ -434,19 +434,15 @@ and into concurrent phases.</p></div>
   ...
   classLoader_init1();
   ...
-}</code></pre></div></div></div></section><section id="universe_post_init"><h2>universe_post_init</h2><div class="slide-content"><div class="paragraph"><p>src/hotspot/share/memory/universe.cpp</p></div></div></section><section id="initialization"><h2>initialization</h2><div class="slide-content"><div class="paragraph"><p>Make sure klass is linked (verified) before initialization A class could already be verified, since it has been reflected upon.</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>src/hotspot/share/oops/instanceKlass.cpp</p></div>
-<div class="paragraph"><p>VM treats linking as verification class.</p></div>
+}</code></pre></div></div></div></section><section id="universe_post_init"><h2>universe_post_init</h2><div class="slide-content"><div class="paragraph"><p><code>src/hotspot/share/memory/universe.cpp</code></p></div></div></section><section id="initialization"><h2>initialization</h2><div class="slide-content"><div class="paragraph"><p>Make sure klass is linked (verified) before initialization A class could already be verified, since it has been reflected upon.</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>VM treats linking as verification class.</p></div>
 <div class="paragraph"><p>If class is already linked then it&#8217;s not necessary.</p></div>
-<h3>all interfaces implemented by this class must linking before this class</h3><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">  Array&lt;InstanceKlass*&gt;* interfaces = local_interfaces();
+<div class="paragraph"><p><code>src/hotspot/share/oops/instanceKlass.cpp</code></p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>All interfaces implemented by this class must linking before this class</p></div>
+<div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">  Array&lt;InstanceKlass*&gt;* interfaces = local_interfaces();
   int num_interfaces = interfaces-&gt;length();
   for (int index = 0; index &lt; num_interfaces; index++) {
     InstanceKlass* interk = interfaces-&gt;at(index);
     interk-&gt;link_class_impl(CHECK_false);
-  }</code></pre></div></div>
-<h3>Linking with verfication together</h3>
-<h3>verfication bytecode</h3>
-<h3>check constraints</h3>
-<h3>vTable</h3><div class="paragraph"><p>Initialize the vtable and interface table after methods have been rewritten since rewrite may fabricate new methods also does loader constraint checking</p></div></div></section><section id="stackmap"><h2>stackmap</h2><div class="slide-content"><div class="paragraph"><p>Each stack_map_frame structure specifies the type state at a particular bytecode offset.</p></div></div></section></section>
+  }</code></pre></div></div></div></section><section id="linking_with_verfication_together"><h2>Linking with verfication together</h2></section><section id="verfication_bytecode"><h2>Verfication bytecode</h2><div class="slide-content"><div class="paragraph"><p>src/hotspot/share/interpreter/abstractInterpreter.hpp</p></div></div></section><section id="check_constraints"><h2>Check constraints</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp"> SystemDictionaryShared::check_linking_constraints</code></pre></div></div></div></section><section id="vtable"><h2>vTable</h2><div class="slide-content"><div class="paragraph"><p>Initialize the vtable and interface table after methods have been rewritten since rewrite may fabricate new methods also does loader constraint checking</p></div></div></section><section id="stackmap"><h2>stackmap</h2><div class="slide-content"><div class="paragraph"><p>Each stack_map_frame structure specifies the type state at a particular bytecode offset.</p></div></div></section></section>
 <section id="bytecode_interpreter"><h2>bytecode interpreter</h2><div class="slide-content"><div class="ulist"><ul><li><p>bytecode interpreter and generator interpreter</p></li><li><p>method calls and entry points</p></li><li><p>exception handling</p></li><li><p>object allocation and cooperation with GC</p></li><li><p>stack &amp; local var table</p></li><li><p>physical and virtual frames</p></li><li><p>const method, method data and method counters</p></li></ul></div></div></section>
 <section><section id="jvm_interpreter"><h2>JVM interpreter</h2><div class="slide-content"><div class="paragraph"><p>this isn&#8217;t actual all that simple, because we have two different interpreters</p></div><div class="ulist"><ul><li><p>high level language version (aka c++ interpreter), actual interpretation of bytecodes,</p></li><li><p>assembly language version (aka template interpreter), generation of assembly code that creates and manages interpreter runtime frames</p></li></ul></div></div></section><section><div class="slide-content"><div class="paragraph"><p>src/hotspot/share/interpreter/abstractInterpreter.hpp</p></div>
 <div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">// This file contains the platform-independent parts
@@ -677,12 +673,12 @@ add     $0x10,%r10</pre></div></div></div></section><section><div class="slide-c
 <div class="paragraph"><p>It not good idea</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>JIT</p></div>
 <div class="paragraph"><p>If C2 is enabled extra space is needed otherwise prefetching instructions generated by the C2
 compiler will fault</p></div>
-<div class="paragraph"><p>src/hotspot/share/gc/g1/c1
-src/hotspot/share/gc/g1/c2</p></div>
-<div class="paragraph"><p>src/hotspot/share/gc/shenandoah/c1
-src/hotspot/share/gc/shenandoah/c2</p></div>
-<div class="paragraph"><p>src/hotspot/share/gc/z/c1
-src/hotspot/share/gc/z/c2</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Retrie TLAB</p></div>
+<div class="paragraph"><p><code>src/hotspot/share/gc/g1/c1</code><br>
+<code>src/hotspot/share/gc/g1/c2</code><br></p></div>
+<div class="paragraph"><p><code>src/hotspot/share/gc/shenandoah/c1</code><br>
+<code>src/hotspot/share/gc/shenandoah/c2</code><br></p></div>
+<div class="paragraph"><p><code>src/hotspot/share/gc/z/c1</code><br>
+<code>src/hotspot/share/gc/z/c2</code><br></p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Retrie TLAB</p></div>
 <div class="paragraph"><p>GC can retire TLAB space but only
 ZGC and Shenandoah retries space during concurrent stack processing</p></div></div></section></section></div></div><script src="reveal.js/js/reveal.js"></script><script>Array.prototype.slice.call(document.querySelectorAll('.slides section')).forEach(function(slide) {
   if (slide.getAttribute('data-background-color')) return;
