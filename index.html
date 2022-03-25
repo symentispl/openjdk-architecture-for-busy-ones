@@ -417,19 +417,16 @@ chmod +x configure
 ./configure // make sure your java points to JDK 17 or 16, this is required for boot JDK
 make images
 make vscode-project // import project workspace into VSCode</pre></div></div></div></section>
-<section><section id="jvm_initialization"><h2>JVM initialization</h2></section><section id="oopmaps"><h2>OopMaps</h2></section><section id="safepoint"><h2>safepoint</h2></section><section id="stack_processing"><h2>stack processing</h2><div class="slide-content"><div class="paragraph"><p>During safepoint each thread stack is processing</p></div>
-<h3>Always process three frames when starting an iteration.</h3>
-<h3>JEP-376</h3><div class="paragraph"><p>Concurrent Thread-Stack Processing</p></div>
-<h4>Remove thread-stack processing from ZGC safepoints.</h4><div class="paragraph"><p>It also available in Shenandoah</p></div>
+<section><section id="jvm_initialization"><h2>JVM initialization</h2></section><section id="oopmaps"><h2>OopMaps</h2></section><section id="safepoint"><h2>safepoint</h2></section><section id="stack_processing"><h2>stack processing</h2><div class="slide-content"><div class="paragraph"><p>During safepoint each thread stack is processing</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Always process three frames when starting an iteration.</p></div>
+<div class="ulist"><div class="title">The three frames corresponds to:</div><ul><li><p>The callee frame</p></li><li><p>The caller frame</p></li><li><p>An extra frame to deal with unwinding safepointing on the way out. Sometimes, we also call into the runtime to on_unwind(), but then  hit a safepoint poll on the way out from the runtime.</p></li></ul></div>
+<div class="paragraph"><p><code>This allows a callee to always be able to read state from its caller without needing any special barriers.</code></p></div></div></section><section id="jep_376"><h2>JEP-376</h2><div class="slide-content"><div class="paragraph"><p>Concurrent Thread-Stack Processing</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Remove thread-stack processing from ZGC safepoints.</p></div>
+<div class="paragraph"><p>It also available in Shenandoah</p></div>
 <div class="paragraph"><p>Each stack processes concurrently</p></div>
-<h4>Make stack processing lazy, cooperative, concurrent, and incremental.</h4>
-<h4>Remove all other per-thread root processing from ZGC safepoints.</h4>
-<h4>Provide a mechanism by which other HotSpot subsystems can lazily process stacks.</h4>
-<h4>Stack watermark</h4><div class="paragraph"><p>All GC operations that scale with the size of the heap and the size of metaspace out of safepoint operations
+<div class="paragraph"><p>Only GC uses the OopMapCache during thread stack root scanning<br>
+any other uses generate an oopmap but do not save it in the cache.</p></div></div></section><section id="make_stack_processing_lazy_cooperative_concurrent_and_incremental"><h2>Make stack processing lazy, cooperative, concurrent, and incremental.</h2></section><section id="remove_all_other_per_thread_root_processing_from_zgc_safepoints"><h2>Remove all other per-thread root processing from ZGC safepoints.</h2></section><section id="provide_a_mechanism_by_which_other_hotspot_subsystems_can_lazily_process_stacks"><h2>Provide a mechanism by which other HotSpot subsystems can lazily process stacks.</h2></section><section id="stack_watermark"><h2>Stack watermark</h2><div class="slide-content"><div class="paragraph"><p>All GC operations that scale with the size of the heap and the size of metaspace out of safepoint operations
 and into concurrent phases.</p></div>
-<div class="paragraph"><p>per-thread processing</p></div>
-<h5>The only activities still done in GC safepoints are a subset of root processing and a time-bounded marking termination operation.</h5>
-<h5>Project Loom</h5><div class="paragraph"><p>It necessary for Project Loom for lazy stack processing</p></div></div></section></section>
+<div class="paragraph"><p><code>per-thread processing</code></p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>The only activities still done in GC safepoints are a subset of root processing and a time-bounded marking termination operation.</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Project Loom</p></div>
+<div class="paragraph"><p>It necessary for Project Loom for lazy stack processing</p></div></div></section></section>
 <section><section id="classloaders"><h2>classloaders</h2><div class="slide-content"><div class="paragraph"><p>bootstrap, runtime, application</p></div><div class="paragraph"><p><code>src/hotspot/share/runtime/init.cpp</code></p></div><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">jint init_globals() {
   ...
   classLoader_init1();
