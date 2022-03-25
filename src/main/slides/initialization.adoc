@@ -63,39 +63,43 @@
 
 During safepoint each thread stack is processing 
 
-==== Always process three frames when starting an iteration.
-//
-// The three frames corresponds to:
-// 1) The callee frame
-// 2) The caller frame
-// This allows a callee to always be able to read state from its caller
-// without needing any special barriers.
-//
-// 3) An extra frame to deal with unwinding safepointing on the way out.
-// Sometimes, we also call into the runtime to on_unwind(), but then
-// hit a safepoint poll on the way out from the runtime.
-==== JEP-376
+=== !
+
+Always process three frames when starting an iteration.
+
+.The three frames corresponds to:
+* The callee frame
+* The caller frame
+* An extra frame to deal with unwinding safepointing on the way out. Sometimes, we also call into the runtime to on_unwind(), but then  hit a safepoint poll on the way out from the runtime.
+
+`This allows a callee to always be able to read state from its caller without needing any special barriers.`
+
+=== JEP-376
 
 Concurrent Thread-Stack Processing
 
-===== Remove thread-stack processing from ZGC safepoints.
+=== !
+Remove thread-stack processing from ZGC safepoints.
+
 It also available in Shenandoah 
 
 Each stack processes concurrently 
 
+Only GC uses the OopMapCache during thread stack root scanning + 
+any other uses generate an oopmap but do not save it in the cache.
 
-===== Make stack processing lazy, cooperative, concurrent, and incremental.
+=== Make stack processing lazy, cooperative, concurrent, and incremental.
 
-===== Remove all other per-thread root processing from ZGC safepoints.
+=== Remove all other per-thread root processing from ZGC safepoints.
 
-===== Provide a mechanism by which other HotSpot subsystems can lazily process stacks.
+=== Provide a mechanism by which other HotSpot subsystems can lazily process stacks.
 
-===== Stack watermark
+=== Stack watermark
  
 All GC operations that scale with the size of the heap and the size of metaspace out of safepoint operations
 and into concurrent phases.
 
-per-thread processing 
+`per-thread processing`
 
 
 //  GC safepoint will logically invalidate Java thread stacks by flipping a global variable.
@@ -104,9 +108,12 @@ per-thread processing
 // Java threads will process the minimum number of frames needed to continue execution. Concurrent GC threads will take care of the remaining frames, /// ensuring that all thread stacks and other thread roots are eventually processed. 
 // Synchronization, utilizing the stack watermark barrier, will  ensure that Java threads do not return into a frame while the GC is processing it.
 
-====== The only activities still done in GC safepoints are a subset of root processing and a time-bounded marking termination operation. 
+=== !
+The only activities still done in GC safepoints are a subset of root processing and a time-bounded marking termination operation. 
 
-====== Project Loom 
+=== !
+
+Project Loom 
 
 It necessary for Project Loom for lazy stack processing 
 
