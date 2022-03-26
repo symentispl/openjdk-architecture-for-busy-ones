@@ -531,11 +531,57 @@ and how do you handle different logic to call interpreted vs compiled?</p></div>
   // time (whenever a compile completes).  It can transition from not-null to
   // NULL only at safepoints (because of a de-opt).
   CompiledMethod* volatile _code;                       // Points to the corresponding piece of native code
-  volatile address           _from_interpreted_entry; // Cache of _code ? _adapter-&gt;i2c_entry() : _i2i_entry</code></pre></div></div></div></section><section id="frames"><h2>frames</h2></section><section></section><section><div class="slide-content"><div class="paragraph"><p>we have two kinds of frames, physical frames (aka frames) and virtual frames (aka vframes)</p></div>
-<div class="paragraph"><p>physical frames can be either C (native) or Java frame, where Java frame can be either interpreted or compiled</p></div>
-<div class="paragraph"><p>virtual frame represent source-level frames, which means if methods is inlined,
-there will be single physical frame and many virtual frames</p></div></div></section><section id="method_data_method_counters"><h2>method data &amp; method counters</h2></section><section id="on_stack_replacement"><h2>on-stack replacement</h2></section></section>
-<section><section id="time_for_just_in_time_compiler"><h2>time for just-in-time compiler</h2><div class="slide-content"><div class="ulist"><ul><li><p>C1/C2 (PGO)</p></li><li><p>method counters &amp; type profile (co jest profilowane)</p></li><li><p>to jest plugin</p></li><li><p>CompilationTask &#8594; CompilationQueue (bail out)</p></li><li><p>simplePolicy.hpp</p></li><li><p>speculating compiler &#8594; deopt</p></li><li><p>uncommontrap &#8594; stab</p></li><li><p>CHA</p></li><li><p>OSR &#8594; jak to podmiana działa ( napisz benchmar z while true)</p></li><li><p>register allocation &amp; inline</p></li></ul></div></div></section><section id="a_few_words_about_jit"><h2>a few words about JIT</h2><div class="slide-content"><div class="paragraph"><p>JIT (just-in-time compiler) in JVM was a major step in the world of JITs</p></div>
+  volatile address           _from_interpreted_entry; // Cache of _code ? _adapter-&gt;i2c_entry() : _i2i_entry</code></pre></div></div></div></section><section id="frames"><h2>frames</h2><div class="slide-content"><div class="paragraph"><p>we have two kinds of frames, physical frames (aka frames) and virtual frames (aka vframes)</p></div></div></section><section id="physical_frame"><h2>physical frame</h2></section><section><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">class frame {
+ private:
+  // Instance variables:
+  intptr_t* _sp; // stack pointer (from Thread::last_Java_sp)
+  address   _pc; // program counter (the next instruction after the call)
+
+  CodeBlob* _cb; // CodeBlob that "owns" pc
+  enum deopt_state {
+    not_deoptimized,
+    is_deoptimized,
+    unknown
+  };
+
+  deopt_state _deopt_state;</code></pre></div></div></div></section><section id="code_blob" class="highlight_section_title" data-background-image="https://media.giphy.com/media/y70jyPYRIL1sZOcRJF/giphy.gif"><h2>code blob</h2></section><section><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">// CodeBlob - superclass for all entries in the CodeCache.
+//
+// Subtypes are:
+//  CompiledMethod       : Compiled Java methods (include method that calls to native code)
+//   nmethod             : JIT Compiled Java methods
+//  RuntimeBlob          : Non-compiled method code; generated glue code
+//   BufferBlob          : Used for non-relocatable code such as interpreter, stubroutines, etc.
+//    AdapterBlob        : Used to hold C2I/I2C adapters
+//    VtableBlob         : Used for holding vtable chunks
+//    MethodHandlesAdapterBlob : Used to hold MethodHandles adapters
+//    OptimizedEntryBlob : Used for upcalls from native code
+//   RuntimeStub         : Call to VM runtime methods
+//   SingletonBlob       : Super-class for all blobs that exist in only one instance
+//    DeoptimizationBlob : Used for deoptimization
+//    ExceptionBlob      : Used for stack unrolling
+//    SafepointBlob      : Used to handle illegal instruction exceptions
+//    UncommonTrapBlob   : Used to handle uncommon traps
+//
+//
+// Layout : continuous in the CodeCache
+//   - header
+//   - relocation
+//   - content space
+//     - instruction space
+//   - data space</code></pre></div></div></div></section><section id="virtual_frame"><h2>virtual frame</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">// vframes are virtual stack frames representing source level activations.
+// A single frame may hold several source level activations in the case of
+// optimized code. The debugging stored with the optimized code enables
+// us to unfold a frame as a stack of vframes.
+// A cVFrame represents an activation of a non-java method.
+
+// The vframe inheritance hierarchy:
+// - vframe
+//   - javaVFrame
+//     - interpretedVFrame
+//     - compiledVFrame     ; (used for both compiled Java methods and native stubs)
+//   - externalVFrame
+//     - entryVFrame        ; special frame created when calling Java from C</code></pre></div></div></div></section></section>
+<section><section id="time_for_just_in_time_compiler"><h2>time for just-in-time compiler</h2><div class="slide-content"><div class="ulist"><ul><li><p>compilation policy</p></li><li><p>profile guided optimizations with method counters &amp; method data</p></li><li><p>compile broker, queues and tasks</p></li><li><p>speculating compiler &amp; deoptimizations &amp; uncommon traps</p></li></ul></div></div></section><section id="a_few_words_about_jit"><h2>a few words about JIT</h2><div class="slide-content"><div class="paragraph"><p>JIT (just-in-time compiler) in JVM was a major step in the world of JITs</p></div>
 <div class="ulist"><ul><li><p>profile guided optimizations</p></li><li><p>speculating compilation (with traps and deoptimizations)</p></li><li><p>actually two not one compiler</p></li><li><p>on-stack replacement</p></li><li><p>used SSA (single static assigment) form (using "sea of nodes" developed by Cliff Click)</p></li></ul></div></div></section><section><div class="slide-content"><div class="paragraph"><p>we are not going to dive into implemented optimizations,<br>
 register allocations,<br>
 escape analisys,<br>
@@ -553,7 +599,7 @@ inlining</p></div>
 <div class="ulist"><ul><li><p>CompileQueue</p></li><li><p>CompileTask</p></li><li><p>CompileBroker</p></li></ul></div></div></section><section><div class="slide-content"><div class="paragraph"><p>when compilation policy decides that method should be compiled, it puts a method (a compile task) onto one of the queues</p></div>
 <div class="paragraph"><p>by default C1 queue has one worker threads and C2 has two (it all depends on your machine)</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>The length of C1 queue is used to dynamically adjust the thresholds, so as to introduce additional filtering if the compiler is overloaded. The rationale is that by the time a method gets compiled it can become unused, so it doesn&#8217;t make sense to put too much onto the queue.</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>After profiling is completed at level 3 the transition is made to level 4. Again, the length of the C2 queue is used as a feedback to adjust the thresholds.
 After the first C1 compile some basic information is determined about the code like the number of the blocks and the number of the loops. Based on that it can be decided that a method is trivial and compiling it with C1 will yield the same code. In this case the method is compiled at level 1 instead of 4.</p></div></div></section><section id="blocks"><h2>blocks?</h2><div class="slide-content"><div class="paragraph"><p>back to school</p></div>
-<div class="paragraph"><p>one form of representation of program is CFG (control flow graph)</p></div></div></section><section><div class="slide-content"><div class="quoteblock"><blockquote>    In a control-flow graph each node in the graph represents a basic block, i.e. a straight-line piece of code without any jumps or jump targets; jump targets start a block, and jumps end a block. Directed edges are used to represent jumps in the control flow. There are, in most presentations, two specially designated blocks: the entry block, through which control enters into the flow graph, and the exit block, through which all control flow leaves</blockquote><div class="attribution"><cite>Wikipedia</cite></div></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Command line options:
+<div class="paragraph"><p>one form of representation of program is CFG (control flow graph)</p></div></div></section><section><div class="slide-content"><div class="quoteblock"><blockquote>    In a control-flow graph each node in the graph represents a basic block, i.e. a straight-line piece of code without any jumps or jump targets; jump targets start a block, and jumps end a block. Directed edges are used to represent jumps in the control flow. There are, in most presentations, two specially designated blocks: the entry block, through which control enters into the flow graph, and the exit block, through which all control flow leaves</blockquote><div class="attribution"><cite>Wikipedia</cite></div></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Command line options:<br>
 - <code>Tier?InvokeNotifyFreqLog</code> and <code>Tier?BackedgeNotifyFreqLog</code> control the frequency of method invocation and backedge notifications. Basically every n-th invocation or backedge a mutator thread makes a call into the runtime.</p></div>
 <div class="ulist"><ul><li><p><code>Tier?InvocationThreshold</code>, <code>Tier?CompileThreshold</code>, <code>Tier?BackEdgeThreshold</code>, <code>Tier?MinInvocationThreshold</code> control compilation thresholds.
 Level 2 thresholds are not used and are provided for option-compatibility and potential future use.</p></li></ul></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Other thresholds work as follows:
@@ -561,8 +607,7 @@ Transition from interpreter (level 0) to C1 with full profiling (level 3) happen
 <div class="literalblock"><div class="content"><pre>i &gt; TierXInvocationThreshold * s || (i &gt; TierXMinInvocationThreshold * s  &amp;&amp; i + b &gt; TierXCompileThreshold * s),</pre></div></div>
 <div class="paragraph"><p>where $i$ is the number of method invocations, $b$ number of backedges and $s$ is the scaling coefficient that will be discussed further.</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>The intuition is to equalize the time that is spend profiling each method.
 The same predicate is used to control the transition from level 3 to level 4 (C2). It should be noted though that the thresholds are relative. Moreover i and b for the 0&#8594;3 transition come from Method* and for 3&#8594;4 transition they come from MDO (since profiled invocations are counted separately). Finally, if a method does not contain anything worth profiling, a transition from level 3 to level 4 occurs without considering thresholds (e.g., with fewer invocations than what is specified by Tier4InvocationThreshold).</p></div></div></section><section id="method_and_mdo"><h2>Method* and MDO</h2><div class="slide-content"><div class="paragraph"><p><code>Method</code> is a JVM class which models bytecode method</p></div>
-<div class="paragraph"><p><code>src/hotspot/share/oops/method.hpp</code></p></div>
-<div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">class Method : public Metadata {
+<div class="paragraph"><p><code>src/hotspot/share/oops/method.hpp</code></p></div></div></section><section><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">class Method : public Metadata {
  friend class VMStructs;
  friend class JVMCIVMStructs;
  private:
@@ -573,6 +618,7 @@ The same predicate is used to control the transition from level 3 to level 4 (C2
   MethodCounters*   _method_counters;
 }</code></pre></div></div></div></section><section><div class="slide-content"><div class="paragraph"><p>MDO are instances of <code>MethodData</code>,<br>
 which are only use at compilation level 3,<br>
+(there are traces that it can be also used by interpreter)
 so they are not always available<br>
 (your intuition is right C2 methods don&#8217;t have profilers)</p></div></div></section><section><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">class MethodCounters : public Metadata {
  friend class VMStructs;
@@ -601,7 +647,8 @@ so they are not always available<br>
   // 3. (INT_MIN..0]                  - method is hot and will deopt and get
   //                                    recompiled without the counters
   u1                _highest_comp_level;          // Highest compile level this method has ever seen.
-  u1                _highest_osr_comp_level;      // Same for OSR level</code></pre></div></div></div></section><section id="methoddata"><h2>MethodData</h2><div class="slide-content"><div class="paragraph"><p><code>MethodCounter</code> has really basic profiling information (only counters),<br>
+  u1                _highest_osr_comp_level;      // Same for OSR level</code></pre></div></div></div></section><section id="methoddata"><h2>MethodData</h2><div class="slide-content"><div class="paragraph"><p>as you saw <code>MethodCounter</code> has a really basic<br>
+profiling information (only counters),<br>
 the magic is in <code>MethodData</code></p></div>
 <div class="paragraph"><p><code>src/hotspot/share/oops/methodData.hpp</code></p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>The MethodData object collects counts and other profile information
 during zeroth-tier (interpretive) and first-tier execution.
@@ -612,7 +659,7 @@ poorly, but which is thought to be rare.  The profile provides
 evidence of this rarity for a given method or even BCI.  It allows
 the compiler to back out of the optimization at places where it
 has historically been a poor choice.  Other heuristics try to use
-specific information gathered about types observed at a given site.</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>All data in the profile is approximate.  It is expected to be accurate
+specific information gathered about types observed at a given site.</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>All data in the profile is approximate. It is expected to be accurate
 on the whole, but the system expects occasional inaccuraces, due to
 counter overflow, multiprocessor races during data collection, space
 limitations, missing MDO blocks, etc.  Bad or missing data will degrade
@@ -625,11 +672,30 @@ that BCI.  In other words, there is a small lattice which approximates
 the ideal of an infinite-precision counter for each event at each BCI,
 and the lattice quickly "bottoms out" in a state where all counters
 are taken to be indefinitely large.</p></div>
-<div class="literalblock"><div class="content"><pre> The reader will find many data races in profile gathering code, starting
- with invocation counter incrementation.  None of these races harm correct
- execution of the compiled code.
-== heap</pre></div></div>
-<div class="paragraph"><p>Heap is initilized during creating the Universe.</p></div></div></section><section id="gc" data-background-image="https://media4.giphy.com/media/njZPp4pQ0g4fe/giphy.gif"><h2>GC</h2><div class="slide-content"><div class="paragraph"><p>Algorithm is choose during creating the Universe</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>But sometimes is different than we expect</p></div>
+<div class="paragraph"><p>The reader will find many data races in profile gathering code, starting
+with invocation counter incrementation. None of these races harm correct
+execution of the compiled code.</p></div></div></section><section id="speculating_jit" data-background-image="https://media.giphy.com/media/Lw39ENuDr0SdO/giphy.gif"><h2>speculating JIT</h2></section><section><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-Java hljs" data-noescape="true" data-lang="Java">if(){
+  // lots of code
+} else {
+  // even more code
+}</code></pre></div></div></div></section><section><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-Java hljs" data-noescape="true" data-lang="Java">if(){
+  // lots of code
+} else {
+  uncommon_trap();
+}</code></pre></div></div></div></section><section id="uncommon_trap"><h2>uncommon trap</h2><div class="slide-content"><div class="paragraph"><p>this is a place in code of your compiled method<br>
+which calls into JVM <code>Deoptimization::uncommon_trap</code></p></div>
+<div class="paragraph"><p><code>src/hotspot/share/runtime/deoptimization.hpp</code></p></div></div></section><section id="deopt_reason_action"><h2>deopt reason &amp; action</h2><div class="slide-content"><div class="paragraph"><p>DepotReason is a condition that cause deoptimization</p></div>
+<div class="ulist"><ul><li><p>unexpected null or zero divisor</p></li><li><p>unexpected array index</p></li><li><p>unexpected object class</p></li><li><p>unexpected object class in bimorphic inlining</p></li></ul></div></div></section><section id="deopt_action"><h2>deopt action</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">  // What action must be taken by the runtime?
+  enum DeoptAction {
+    Action_none,                  // just interpret, do not invalidate nmethod
+    Action_maybe_recompile,       // recompile the nmethod; need not invalidate
+    Action_reinterpret,           // invalidate the nmethod, reset IC, maybe recompile
+    Action_make_not_entrant,      // invalidate the nmethod, recompile (probably)
+    Action_make_not_compilable,   // invalidate the nmethod and do not compile
+    Action_LIMIT
+    // Note:  Keep this enum in sync. with _trap_action_name.
+  };</code></pre></div></div></div></section><section id="so_what_is_actually_happening"><h2>so what is actually happening?</h2><div class="slide-content"><div class="ulist"><ul><li><p>your compile frame needs to be converted into an interpreter frame</p></li><li><p>compiled method can be marked as not entrant, or even invalidated from code cache</p></li><li><p>invocation counters and method data can be reset</p></li></ul></div></div></section></section>
+<section><section id="heap"><h2>heap</h2><div class="slide-content"><div class="paragraph"><p>Heap is initilized during creating the Universe.</p></div></div></section><section id="gc" data-background-image="https://media4.giphy.com/media/njZPp4pQ0g4fe/giphy.gif"><h2>GC</h2><div class="slide-content"><div class="paragraph"><p>Algorithm is choose during creating the Universe</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>But sometimes is different than we expect</p></div>
 <div class="paragraph"><p>Ergo, ergo, ergo..</p></div></div></section><section id="roots"><h2>roots</h2><div class="slide-content"><div class="paragraph"><p>Root is basic concept in GC cycle</p></div>
 <div class="paragraph"><p>Root is thread, local variables, static fields, final fields.</p></div></div></section><section id="vm_threads_are_roots"><h2>VM threads are roots</h2></section><section id="bariers" data-background-image="https://media2.giphy.com/media/wLJSjc5fzMJtS/giphy.gif"><h2>bariers</h2><div class="slide-content"><div class="paragraph"><p>Barriers need JIT help for speed</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>G1, Shendandoah, ZGC</p></div>
 <div class="paragraph"><p>Only these GCs use barriers</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Barriers</p></div>
