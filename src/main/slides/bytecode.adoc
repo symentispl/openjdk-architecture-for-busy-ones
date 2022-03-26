@@ -2,7 +2,7 @@
 
 bootstrap, runtime, application 
 
-src/hotspot/share/runtime/init.cpp
+`src/hotspot/share/runtime/init.cpp`
 
 [source,cpp]
 -----
@@ -15,7 +15,7 @@ jint init_globals() {
 
 === universe_post_init
 
-src/hotspot/share/memory/universe.cpp
+`src/hotspot/share/memory/universe.cpp`
 
 
 === initialization  
@@ -25,14 +25,17 @@ Make sure klass is linked (verified) before initialization A class could already
 === !
 
 // linking
-src/hotspot/share/oops/instanceKlass.cpp
 
 VM treats linking as verification class. 
 
 If class is already linked then it's not necessary. 
 
+`src/hotspot/share/oops/instanceKlass.cpp`
 
-==== all interfaces implemented by this class must linking before this class
+
+
+=== !
+All interfaces implemented by this class must linking before this class
 
 [source,cpp]
 ----
@@ -46,20 +49,25 @@ If class is already linked then it's not necessary.
 
 // 
 // InstanceKlass::link_class_impl(TRAPS) 
-==== Linking with verfication together
+===  Linking with verfication together
 
-==== verfication bytecode 
+=== Verfication bytecode 
 
-// src/hotspot/share/interpreter/abstractInterpreter.hpp
+src/hotspot/share/interpreter/abstractInterpreter.hpp
 
 
 
 // Verifier::verify
 // ClassVerifier::verify_class
 
-==== check constraints 
-// SystemDictionaryShared::check_linking_constraints
-==== vTable 
+===  Check constraints 
+
+[source,cpp]
+-----
+ SystemDictionaryShared::check_linking_constraints
+-----
+
+=== vTable 
 
 Initialize the vtable and interface table after methods have been rewritten since rewrite may fabricate new methods also does loader constraint checking
 
@@ -72,5 +80,6 @@ Initialize the vtable and interface table after methods have been rewritten sinc
 
 === stackmap 
 
+Uses to preverification of Java classes  
 Each stack_map_frame structure specifies the type state at a particular bytecode offset. 
 

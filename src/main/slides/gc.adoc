@@ -188,7 +188,7 @@ size_t ThreadLocalAllocBuffer::initial_desired_size() {
 
 TLAB Size recalculting 
 
-Every FullGC 
+Every FullGC TLAB is resizing if needed 
 // ThreadLocalAllocBuffer::startup_initialization
 
 === !
@@ -205,14 +205,14 @@ If C2 is enabled extra space is needed otherwise prefetching instructions genera
 compiler will fault 
 
 
-src/hotspot/share/gc/g1/c1
-src/hotspot/share/gc/g1/c2
+`src/hotspot/share/gc/g1/c1` +
+`src/hotspot/share/gc/g1/c2` + 
 
-src/hotspot/share/gc/shenandoah/c1
-src/hotspot/share/gc/shenandoah/c2
+`src/hotspot/share/gc/shenandoah/c1` + 
+`src/hotspot/share/gc/shenandoah/c2` + 
 
-src/hotspot/share/gc/z/c1
-src/hotspot/share/gc/z/c2
+`src/hotspot/share/gc/z/c1` + 
+`src/hotspot/share/gc/z/c2` + 
 
 === !
 
