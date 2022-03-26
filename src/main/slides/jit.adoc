@@ -1,15 +1,9 @@
 == time for just-in-time compiler
 
-* C1/C2 (PGO)
-* method counters & type profile (co jest profilowane)
-* to jest plugin
-* CompilationTask -> CompilationQueue (bail out)
-* simplePolicy.hpp
-* speculating compiler -> deopt
-* uncommontrap -> stab
-* CHA
-* OSR -> jak to podmiana działa ( napisz benchmar z while true)
-* register allocation & inline
+* compilation policy
+* profile guided optimizations with method counters & method data
+* compile broker, queues and tasks
+* speculating compiler & deoptimizations & uncommon traps
 
 === a few words about JIT
 
@@ -117,7 +111,7 @@ one form of representation of program is CFG (control flow graph)
 
 === !
 
-Command line options:
+Command line options: +
 - `Tier?InvokeNotifyFreqLog` and `Tier?BackedgeNotifyFreqLog` control the frequency of method invocation and backedge notifications. Basically every n-th invocation or backedge a mutator thread makes a call into the runtime.
 
 - `Tier?InvocationThreshold`, `Tier?CompileThreshold`, `Tier?BackEdgeThreshold`, `Tier?MinInvocationThreshold` control compilation thresholds.
@@ -143,6 +137,8 @@ The same predicate is used to control the transition from level 3 to level 4 (C2
 
 `src/hotspot/share/oops/method.hpp`
 
+=== !
+
 [source,cpp]
 ----
 class Method : public Metadata {
@@ -161,6 +157,7 @@ class Method : public Metadata {
 
 MDO are instances of `MethodData`, +
 which are only use at compilation level 3, +
+(there are traces that it can be also used by interpreter)
 so they are not always available +
 (your intuition is right C2 methods don't have profilers)
 
@@ -200,7 +197,8 @@ class MethodCounters : public Metadata {
 
 === MethodData
 
-`MethodCounter` has really basic profiling information (only counters), +
+as you saw `MethodCounter` has a really basic +
+profiling information (only counters), +
 the magic is in `MethodData`
 
 `src/hotspot/share/oops/methodData.hpp`
@@ -220,7 +218,7 @@ specific information gathered about types observed at a given site.
 
 === !
 
-All data in the profile is approximate.  It is expected to be accurate
+All data in the profile is approximate. It is expected to be accurate
 on the whole, but the system expects occasional inaccuraces, due to
 counter overflow, multiprocessor races during data collection, space
 limitations, missing MDO blocks, etc.  Bad or missing data will degrade
@@ -238,6 +236,71 @@ the ideal of an infinite-precision counter for each event at each BCI,
 and the lattice quickly "bottoms out" in a state where all counters
 are taken to be indefinitely large.
 
- The reader will find many data races in profile gathering code, starting
- with invocation counter incrementation.  None of these races harm correct
- execution of the compiled code.
+The reader will find many data races in profile gathering code, starting
+with invocation counter incrementation. None of these races harm correct
+execution of the compiled code.
+
+=== speculating JIT
+
+image::https://media.giphy.com/media/Lw39ENuDr0SdO/giphy.gif[background]
+
+=== !
+
+[source,Java]
+----
+if(){
+  // lots of code
+} else {
+  // even more code
+}
+----
+
+=== !
+
+[source,Java]
+----
+if(){
+  // lots of code
+} else {
+  uncommon_trap();
+}
+----
+
+=== uncommon trap
+
+this is a place in code of your compiled method +
+which calls into JVM `Deoptimization::uncommon_trap`
+
+`src/hotspot/share/runtime/deoptimization.hpp`
+
+=== deopt reason & action
+
+DepotReason is a condition that cause deoptimization
+
+* unexpected null or zero divisor
+* unexpected array index
+* unexpected object class
+* unexpected object class in bimorphic inlining
+
+=== deopt action
+
+[source,cpp]
+----
+  // What action must be taken by the runtime?
+  enum DeoptAction {
+    Action_none,                  // just interpret, do not invalidate nmethod
+    Action_maybe_recompile,       // recompile the nmethod; need not invalidate
+    Action_reinterpret,           // invalidate the nmethod, reset IC, maybe recompile
+    Action_make_not_entrant,      // invalidate the nmethod, recompile (probably)
+    Action_make_not_compilable,   // invalidate the nmethod and do not compile
+    Action_LIMIT
+    // Note:  Keep this enum in sync. with _trap_action_name.
+  };
+----
+
+=== so what is actually happening?
+
+* your compile frame needs to be converted into an interpreter frame
+* compiled method can be marked as not entrant, or even invalidated from code cache
+* invocation counters and method data can be reset
+

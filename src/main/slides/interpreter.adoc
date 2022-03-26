@@ -223,27 +223,89 @@ and how do you handle different logic to call interpreted vs compiled?
 
 === frames
 
+we have two kinds of frames, physical frames (aka frames) and virtual frames (aka vframes)
+
+
+=== physical frame 
+
 // A frame represents a physical stack frame (an activation).  Frames
 // can be C or Java frames, and the Java frames can be interpreted or
 // compiled.  In contrast, vframes represent source-level activations,
 // so that one physical frame can correspond to multiple source level
 // frames because of inlining.
 
+=== !
+
+[source,cpp]
+----
+class frame {
+ private:
+  // Instance variables:
+  intptr_t* _sp; // stack pointer (from Thread::last_Java_sp)
+  address   _pc; // program counter (the next instruction after the call)
+
+  CodeBlob* _cb; // CodeBlob that "owns" pc
+  enum deopt_state {
+    not_deoptimized,
+    is_deoptimized,
+    unknown
+  };
+
+  deopt_state _deopt_state;
+----
+
+[role="highlight_section_title"]
+=== code blob
+
+image::https://media.giphy.com/media/y70jyPYRIL1sZOcRJF/giphy.gif[background]
 
 === !
 
+[source,cpp]
+----
+// CodeBlob - superclass for all entries in the CodeCache.
+//
+// Subtypes are:
+//  CompiledMethod       : Compiled Java methods (include method that calls to native code)
+//   nmethod             : JIT Compiled Java methods
+//  RuntimeBlob          : Non-compiled method code; generated glue code
+//   BufferBlob          : Used for non-relocatable code such as interpreter, stubroutines, etc.
+//    AdapterBlob        : Used to hold C2I/I2C adapters
+//    VtableBlob         : Used for holding vtable chunks
+//    MethodHandlesAdapterBlob : Used to hold MethodHandles adapters
+//    OptimizedEntryBlob : Used for upcalls from native code
+//   RuntimeStub         : Call to VM runtime methods
+//   SingletonBlob       : Super-class for all blobs that exist in only one instance
+//    DeoptimizationBlob : Used for deoptimization
+//    ExceptionBlob      : Used for stack unrolling
+//    SafepointBlob      : Used to handle illegal instruction exceptions
+//    UncommonTrapBlob   : Used to handle uncommon traps
+//
+//
+// Layout : continuous in the CodeCache
+//   - header
+//   - relocation
+//   - content space
+//     - instruction space
+//   - data space
+----
 
-=== !
+=== virtual frame
 
-we have two kinds of frames, physical frames (aka frames) and virtual frames (aka vframes)
+[source,cpp]
+----
+// vframes are virtual stack frames representing source level activations.
+// A single frame may hold several source level activations in the case of
+// optimized code. The debugging stored with the optimized code enables
+// us to unfold a frame as a stack of vframes.
+// A cVFrame represents an activation of a non-java method.
 
-physical frames can be either C (native) or Java frame, where Java frame can be either interpreted or compiled
-
-virtual frame represent source-level frames, which means if methods is inlined, 
-there will be single physical frame and many virtual frames
-
-=== method data & method counters
-
-=== on-stack replacement
-
+// The vframe inheritance hierarchy:
+// - vframe
+//   - javaVFrame
+//     - interpretedVFrame
+//     - compiledVFrame     ; (used for both compiled Java methods and native stubs)
+//   - externalVFrame
+//     - entryVFrame        ; special frame created when calling Java from C
+----
 
