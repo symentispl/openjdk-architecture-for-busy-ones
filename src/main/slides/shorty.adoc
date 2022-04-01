@@ -1,0 +1,170 @@
+= Jakże vspaniała maszyna
+Architektura OpenJDK dla upartych
+:idprefix:
+:stem: asciimath
+:backend: html
+:source-highlighter: highlightjs
+:highlightjs-style: github
+:revealjs_history: true
+:revealjs_theme: night
+:revealjs_controls: false
+:revealjs_width: 1920
+:revealjs_height: 1080
+:imagesdir: images
+:customcss: css/custom.css
+:mmdc: node_modules/.bin/mmdc
+:title-slide-background-image: pexels-pixabay-159275.jpg
+
+== Jarosław Pałka
+
+Neo4j (a graph database) performance engineer
+
+over 20 years with JVM, +
+since early days of no native threads and, +
+no JIT and slow as hell GC
+
+speaker, coder, architect
+
+founder of SegFault conference +
+godfather of Programistyczna Grupa Rozwoju
+
+== abstract
+
+the original version of this presentation +
+was created together with Krystian Zybała
+
+and is a monstrous 3 hours deep dive +
+into fundamental concepts in +
+OpenJDK
+
+=== !
+
+image::https://media.giphy.com/media/tXL4FHPSnVJ0A/giphy.gif[background]
+
+=== !
+
+you are lucky because we just have 30 minutes ;)
+
+=== !
+
+image::https://media.giphy.com/media/3o7ZeEZUzRjyvWuuIg/giphy.gif[background]
+
+=== OpenJDK
+
+OpenJDK is an open-source implementation of https://docs.oracle.com/javase/specs/jvms/se18/html/index.html[The Java® Virtual Machine Specification]
+
+it is also known as HotSpot
+
+is an open-sourced implementation of Sun's original JVM +
+you can download it from https://github.com/openjdk/jdk[]
+
+== if you want to follow along
+
+    git clone https://github.com/openjdk/jdk18
+    cd jdk18
+    chmod +x configure
+    // read doc/building.md and install required dependencies
+    ./configure // make sure your java points to JDK 18 or 17, this is required for boot JDK
+    make images
+    make vscode-project // import project workspace into VSCode
+
+
+== abstract
+
+* JVM initialization
+* loading and verifying bytecode
+* bytecode interpreter
+* time for just-in-time compiler
+* safepoints and how we stop the world
+* garbage collector black magic
+
+== JVM initilization
+
+== loading and verifying bytecode
+
+== bytecode interpreter
+
+this isn't actual all that simple, because we have two different interpreters
+
+* high level language version (aka c++ interpreter), actual interpretation of bytecodes,
+* assembly language version (aka template interpreter), generation of assembly code that creates and manages interpreter runtime frames
+
+=== !
+
+src/hotspot/share/interpreter/abstractInterpreter.hpp
+
+[source,cpp]
+----
+// This file contains the platform-independent parts
+// of the abstract interpreter and the abstract interpreter generator.
+
+// Organization of the interpreter(s). There exists two different interpreters in hotpot
+// an assembly language version (aka template interpreter) and a high level language version
+// (aka c++ interpreter). Th division of labor is as follows:
+
+// Template Interpreter          Zero Interpreter       Functionality
+//
+// templateTable*                bytecodeInterpreter*   actual interpretation of bytecodes
+//
+// templateInterpreter*          zeroInterpreter*       generation of assembly code that creates
+//                                                      and manages interpreter runtime frames.
+//
+----
+
+=== a word about "zero" JVM
+
+a "zero" JVM is a version of JVM which with minimal (in a perfect world "zero") set of changes will run on new architecture and operating system
+
+it means as long GCC (in general C compiler) works on this architecture, JVM
+will work there (of course only in interpreted mode)
+
+it doesn't mean Java will work there, only JVM (mindfuck)
+
+=== static void run(interpreterState istate);
+
+image::https://media.giphy.com/media/JUwT5qRmpFjqOhCLAB/giphy.gif[background]
+
+=== !
+
+[source,cpp]
+----
+  intptr_t*        topOfStack = (intptr_t *)istate->stack(); /* access with STACK macros */
+  address          pc = istate->bcp();
+  jubyte opcode;
+  intptr_t*        locals = istate->locals();
+  ConstantPoolCache*    cp = istate->constants(); // method()->constants()->cache()
+#ifdef LOTS_OF_REGS
+  JavaThread*      THREAD = istate->thread();
+#else
+----
+
+== time for just-in-time compiler
+
+this isn't actual all that simple, +
+because we have two different compilers +
+(plus GraalVM, thanks to JVMCI (JVM compiler interface))
+
+=== !
+
+yes, you can write your own compilers as plugins
+
+(only if your are rich, https://www.azul.com/products/components/falcon-jit-compiler/[Azul Platform Prime’s Falcon JIT Compiler])
+
+=== HotSpot compilers
+
+C1 (aka client compiler) was originally design for better startup times, but it doesn't generate optimal code
+
+C2 (aka server compiler) is slower, but generates how quality, optmized, state of the art native code
+
+at the moment we have tiered compilation enabled +
+(using both compilers)
+
+[role="highlight_section_title"]
+=== C2 code
+
+image::https://media.giphy.com/media/zy9wp81bCIyzu/giphy.gif[background]
+
+
+== safepoints and how we stop the world
+
+== garbage collector black magic
