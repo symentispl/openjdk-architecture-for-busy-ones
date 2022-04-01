@@ -252,6 +252,7 @@ class frame {
   };
 
   deopt_state _deopt_state;
+};
 ----
 
 [role="highlight_section_title"]

@@ -45,6 +45,10 @@ image::https://media.giphy.com/media/tXL4FHPSnVJ0A/giphy.gif[background]
 
 you are lucky because we just have 30 minutes ;)
 
+goal of this presentation is to kickstart your adventure in OpenJDK
+
+I will focus on core components and explaining vocabulary
+
 === !
 
 image::https://media.giphy.com/media/3o7ZeEZUzRjyvWuuIg/giphy.gif[background]
@@ -71,16 +75,19 @@ you can download it from https://github.com/openjdk/jdk[]
 
 == abstract
 
-* JVM initialization
 * loading and verifying bytecode
 * bytecode interpreter
 * time for just-in-time compiler
 * safepoints and how we stop the world
 * garbage collector black magic
 
-== JVM initilization
-
 == loading and verifying bytecode
+
+OpenJDK HotSpot doesn't know and understand Java (actually they are separate specifications)
+
+but it understands bytecode ;)
+
+=== loading bytecode
 
 == bytecode interpreter
 
@@ -138,7 +145,181 @@ image::https://media.giphy.com/media/JUwT5qRmpFjqOhCLAB/giphy.gif[background]
 #else
 ----
 
+=== !
+
+interpreter uses messages to communicate with itself :) +
+and with frame manager (aka interpreter generator)
+
+[source,cpp]
+----
+    enum messages {
+         no_request = 0,            // unused
+         initialize,                // Perform one time interpreter initializations (assumes all switches set)
+         // status message to C++ interpreter
+         method_entry,              // initial method entry to interpreter
+         method_resume,             // frame manager response to return_from_method request (assuming a frame to resume)
+         deopt_resume,              // returning from a native call into a deopted frame
+         deopt_resume2,             // deopt resume as a result of a PopFrame
+         got_monitors,              // frame manager response to more_monitors request
+         rethrow_exception,         // unwinding and throwing exception
+         // requests to frame manager from C++ interpreter
+         call_method,               // request for new frame from interpreter, manager responds with method_entry
+         return_from_method,        // request from interpreter to unwind, manager responds with method_continue
+         more_monitors,             // need a new monitor
+         throwing_exception,        // unwind stack and rethrow
+         popping_frame,             // unwind call and retry call
+         do_osr,                    // request this invocation be OSR's
+         early_return               // early return as commanded by jvmti
+    };
+----
+
+=== !
+
+[mermaid,scale=2]
+....
+sequenceDiagram
+    JVM->>ZeroInterpreter:initialize_code
+    ZeroInterpreter->>ZeroInterpreterGenerator:generate_all
+    ZeroInterpreter->>BytecodeInterpreter:run(istate->msg=initialize)
+    JVM->>ZeroInterpreter:ZeroInterpreter:normal_entry(Method* method)
+    ZeroInterpreter->>InterpreterFrame:build
+    ZeroInterpreter->>JavaThread:push_zero_frame
+    ZeroInterpreter->>ZeroInterpreter:main_loop
+    activate ZeroInterpreter
+    ZeroInterpreter->>BytecodeInterpreter:run()
+    ZeroInterpreter->>ZeroInterpreter:handle message from BytecodeInterpreter 
+    deactivate ZeroInterpreter
+....
+
+=== method and call entry point
+
+a method in JVM can be either interpreted or compiled +
+(to complete a picture it can also be native or intrinsic)
+
+from an interpreted method you can call either +
+other interpreted or compiled method +
+but how do you know if method has been compiled? +
+and how do you handle different logic to call interpreted vs compiled?
+
+=== !
+
+[source,cpp]
+----
+// src/hotspot/share/oops/method.hpp:Method
+
+// Entry point for calling both from and to the interpreter.
+  address _i2i_entry;           // All-args-on-stack calling convention
+  // Entry point for calling from compiled code, to compiled code if it exists
+  // or else the interpreter.
+  volatile address _from_compiled_entry;        // Cache of: _code ? _code->entry_point() : _adapter->c2i_entry()
+  // The entry point for calling both from and to compiled code is
+  // "_code->entry_point()".  Because of tiered compilation and de-opt, this
+  // field can come and go.  It can transition from NULL to not-null at any
+  // time (whenever a compile completes).  It can transition from not-null to
+  // NULL only at safepoints (because of a de-opt).
+  CompiledMethod* volatile _code;                       // Points to the corresponding piece of native code
+  volatile address           _from_interpreted_entry; // Cache of _code ? _adapter->i2c_entry() : _i2i_entry
+----
+
+=== frames
+
+we have two kinds of frames, physical frames (aka frames) and virtual frames (aka vframes)
+
+
+=== physical frame 
+
+// A frame represents a physical stack frame (an activation).  Frames
+// can be C or Java frames, and the Java frames can be interpreted or
+// compiled.  In contrast, vframes represent source-level activations,
+// so that one physical frame can correspond to multiple source level
+// frames because of inlining.
+
+=== !
+
+[source,cpp]
+----
+class frame {
+ private:
+  // Instance variables:
+  intptr_t* _sp; // stack pointer (from Thread::last_Java_sp)
+  address   _pc; // program counter (the next instruction after the call)
+
+  CodeBlob* _cb; // CodeBlob that "owns" pc
+  enum deopt_state {
+    not_deoptimized,
+    is_deoptimized,
+    unknown
+  };
+
+  deopt_state _deopt_state;
+};
+----
+
+[role="highlight_section_title"]
+=== code blob
+
+image::https://media.giphy.com/media/y70jyPYRIL1sZOcRJF/giphy.gif[background]
+
+=== !
+
+[source,cpp]
+----
+// CodeBlob - superclass for all entries in the CodeCache.
+//
+// Subtypes are:
+//  CompiledMethod       : Compiled Java methods (include method that calls to native code)
+//   nmethod             : JIT Compiled Java methods
+//  RuntimeBlob          : Non-compiled method code; generated glue code
+//   BufferBlob          : Used for non-relocatable code such as interpreter, stubroutines, etc.
+//    AdapterBlob        : Used to hold C2I/I2C adapters
+//    VtableBlob         : Used for holding vtable chunks
+//    MethodHandlesAdapterBlob : Used to hold MethodHandles adapters
+//    OptimizedEntryBlob : Used for upcalls from native code
+//   RuntimeStub         : Call to VM runtime methods
+//   SingletonBlob       : Super-class for all blobs that exist in only one instance
+//    DeoptimizationBlob : Used for deoptimization
+//    ExceptionBlob      : Used for stack unrolling
+//    SafepointBlob      : Used to handle illegal instruction exceptions
+//    UncommonTrapBlob   : Used to handle uncommon traps
+//
+//
+// Layout : continuous in the CodeCache
+//   - header
+//   - relocation
+//   - content space
+//     - instruction space
+//   - data space
+----
+
+=== virtual frame
+
+[source,cpp]
+----
+// vframes are virtual stack frames representing source level activations.
+// A single frame may hold several source level activations in the case of
+// optimized code. The debugging stored with the optimized code enables
+// us to unfold a frame as a stack of vframes.
+// A cVFrame represents an activation of a non-java method.
+
+// The vframe inheritance hierarchy:
+// - vframe
+//   - javaVFrame
+//     - interpretedVFrame
+//     - compiledVFrame     ; (used for both compiled Java methods and native stubs)
+//   - externalVFrame
+//     - entryVFrame        ; special frame created when calling Java from C
+----
+
 == time for just-in-time compiler
+
+JIT (just-in-time compiler) in JVM was a major step in the world of JITs
+
+* profile guided optimizations
+* speculating compilation (with traps and deoptimizations)
+* on-stack replacement
+* used SSA (single static assigment) form and "sea of nodes" (developed by Cliff Click)
+
+=== it takes two
 
 this isn't actual all that simple, +
 because we have two different compilers +
@@ -154,9 +335,9 @@ yes, you can write your own compilers as plugins
 
 C1 (aka client compiler) was originally design for better startup times, but it doesn't generate optimal code
 
-C2 (aka server compiler) is slower, but generates how quality, optmized, state of the art native code
+C2 (aka server compiler) is slower, but generates quality, optimized, state of the art native code
 
-at the moment we have tiered compilation enabled +
+at the moment we have tiered compilation enabled by default +
 (using both compilers)
 
 [role="highlight_section_title"]
@@ -164,7 +345,277 @@ at the moment we have tiered compilation enabled +
 
 image::https://media.giphy.com/media/zy9wp81bCIyzu/giphy.gif[background]
 
+[role="highlight_section_title"]
+=== need for speed
+
+image::https://media.giphy.com/media/xTiTnFM0Cr2xcGUsVy/giphy.gif[background]
+
+
+=== !
+
+so, who decides when code gets compiled? +
+(and deoptimized)
+
+`src/hotspot/share/compiler/compilationPolicy.hpp`
+
+let's disassemble the first parts
+
+=== !
+
+The system supports 5 execution levels:
+
+* level 0 - interpreter
+* level 1 - C1 with full optimization (no profiling)
+* level 2 - C1 with invocation and backedge counters
+* level 3 - C1 with full profiling (level 2 + MDO)
+* level 4 - C2
+
+=== wait? wat? profiling?
+
+JVM injects (both in interpreted and compiled code) instrumentation, 
+to record how your code is used +
+
+not only how often method is called (aka counters) +
+but also taken branches, type profile, loop sizes and much more
+
+=== backedge counters?
+
+invocation counter are pretty obvious 
+
+what the hell is backedge counter?
+
+[source,java]
+----
+for(;;){
+
+} // increment backedge counter
+----
+
+=== !
+
+Levels 0, 2 and 3 periodically notify the runtime about the current value of the counters (invocation counters and backedge counters). The frequency of these notifications is different at each level. These notifications are used by the policy to decide what transition to make.
+
+=== !
+
+when compilation policy decides that method should be compiled, it puts a method (a compile task) onto one of the compilation queues
+
+by default C1 queue has one worker threads and C2 has two (it all depends on your machine)
+
+=== speculating JIT
+
+image::https://media.giphy.com/media/Lw39ENuDr0SdO/giphy.gif[background]
+
+=== your code
+
+[source,Java]
+----
+if(){
+  // lots of code
+} else {
+  // even more code
+}
+----
+
+=== your code, compiled
+
+[source,Java]
+----
+if(){
+  // lots of code
+} else {
+  uncommon_trap();
+}
+----
+
+=== uncommon trap
+
+it is a place in code of your compiled method +
+which was not compiled & optimized +
+because of poor ROI +
+(dad joke)
+
+which calls into JVM `Deoptimization::uncommon_trap`
+
+`src/hotspot/share/runtime/deoptimization.hpp`
+
+=== deopt reason & action
+
+DepotReason is a condition that caused deoptimization
+
+* unexpected null or zero divisor
+* unexpected array index
+* unexpected object class
+* unexpected object class in bimorphic inlining
+
+=== deopt action
+
+[source,cpp]
+----
+  // What action must be taken by the runtime?
+  enum DeoptAction {
+    Action_none,                  // just interpret, do not invalidate nmethod
+    Action_maybe_recompile,       // recompile the nmethod; need not invalidate
+    Action_reinterpret,           // invalidate the nmethod, reset IC, maybe recompile
+    Action_make_not_entrant,      // invalidate the nmethod, recompile (probably)
+    Action_make_not_compilable,   // invalidate the nmethod and do not compile
+    Action_LIMIT
+    // Note:  Keep this enum in sync. with _trap_action_name.
+  };
+----
+
+=== invalidate?
+
+yes, we have queues and caches in OpenJDK compiler code ;) +
+
+generated code (which are not only compiled methods) +
+is kept in compile cache +
+(outside of JVM heap)
+
+=== not entrant?
+
+sometimes, when 
+
+=== so what is actually happening?
+
+* your compile frame needs to be converted into an interpreter frame
+* compiled method can be marked as not entrant, or even invalidated from code cache
+* invocation counters and method data can be reset
 
 == safepoints and how we stop the world
 
+safepoints (to be precise global safepoint) is a mechanism +
+which is used to stop application threads when it is needed 
+
+garbage collection cycle +
+revocation of biased locking +
+and other VM operations 
+
+=== dirty little secret
+
+you can think about safepoint as a global flag,
+which is polled by some code, sometimes
+
+and if this flag ise true, application thread has to stop
+
+=== show me the code
+
+[source,cpp]
+----
+class SafepointSynchronize : AllStatic {
+ public:
+  enum SynchronizeState {
+      _not_synchronized = 0,                   // Threads not synchronized at a safepoint. Keep this value 0.
+      _synchronizing    = 1,                   // Synchronizing in progress
+      _synchronized     = 2                    // All Java threads are running in native, blocked in OS or stopped at safepoint.
+                                               // VM thread and any NonJavaThread may be running.
+  };
+  // Threads might read this flag directly, without acquiring the Threads_lock:
+  static volatile SynchronizeState _state;
+};
+----
+
+=== !
+
+JVM injects safepoint poll at
+
+* exit of method
+* loop backedge
+* in interpret code
+* JNI critical blocks
+
+=== !
+
+this means not all threads stop at the same time ;)
+
+TTSP (time to safepoint) is a metric you are looking for
+
+=== !
+
+of course Java thread needs to notify global safepoint mechanism, 
+that is has stopped at safepoint
+
+`src/hotspot/share/runtime/safepoint.hpp`
+
 == garbage collector black magic
+
+OpenJDK garbage collectors implement tracing collectors,
+as you can expect GCs in OpenJDK are pluggable
+
+three key phases:
+
+* reachability analisys from GC roots,
+* swapping unreachable objects
+* compacting memory (optional)
+
+=== GC roots?
+
+GC roots are objects which are always reachable, +
+so we can safely start reachability analysis, +
+as object reachable from GC roots are reachable too
+
+* local variables
+* static fields
+* threads
+* JNI references
+
+=== OopMap
+
+things get complicated for compiled code, +
+as references can be store in CPU registers
+
+OopMap is a data structure +
+which helps track references to objects
+
+=== !
+
+There are three kinds of OopMaps:
+
+* OopMaps for interpreted methods. They are computed lazily, i.e. when GC happens, by analyzing bytecode flow. InterpreterOopMaps are stored in OopMapCache.
+* OopMaps for JIT-compiled methods. They are generated during JIT-compilation and kept along with the compiled code so that VM can quickly find by instruction address the stack locations and the registers where the object references are held.
+* OopMaps for generated shared runtime stubs. These maps are constructed manually by the developers - authors of these runtime stubs.
+
+for more insights `src/hotspot/share/oops/generateOopMap.hpp`
+
+=== allocation?
+
+yes, garbage collectors are responsible for object allocation too
+
+in most cases they use technique called TLAB (Thread-Local Allocation Buffer) +
+`src/hotspot/share/gc/shared/threadLocalAllocBuffer.hpp`
+
+in short every thread gets its own space in the shared heap, +
+so it doesn't have to compete with others
+
+=== TLAB
+
+TLABs are resized during garbage collection, +
+to better respond to allocation pressure
+
+if object is bigger then buffer size, +
+it is allocated in shared space
+
+=== who needs barriers ;)
+
+things get complicated when we want +
+to do some of the GC work +
+concurrently with your code
+
+like reachability analisys, +
+swapping, +
+and compaction
+
+=== !
+
+we need a mechanism to notify JVM +
+when references changes in our code
+
+barriers are small assembly code snipets, +
+injected on load or store of reference
+
+(this needs cooperation between GC, interpreter and compilers)
+
+`src/hotspot/share/gc/shared/barrierSet.hpp`
+
+=== card marking
+
+== thank you!
