@@ -413,7 +413,9 @@ godfather of Programistyczna Grupa Rozwoju</p></div></div></section>
 <section><section id="abstract"><h2>abstract</h2><div class="slide-content"><div class="paragraph"><p>the original version of this presentation<br>
 was created together with Krystian Zybała</p></div><div class="paragraph"><p>and is a monstrous 3 hours deep dive<br>
 into fundamental concepts in<br>
-OpenJDK</p></div></div></section><section data-background-image="https://media.giphy.com/media/tXL4FHPSnVJ0A/giphy.gif"></section><section><div class="slide-content"><div class="paragraph"><p>you are lucky because we just have 30 minutes ;)</p></div></div></section><section data-background-image="https://media.giphy.com/media/3o7ZeEZUzRjyvWuuIg/giphy.gif"></section><section id="openjdk"><h2>OpenJDK</h2><div class="slide-content"><div class="paragraph"><p>OpenJDK is an open-source implementation of <a href="https://docs.oracle.com/javase/specs/jvms/se18/html/index.html">The Java® Virtual Machine Specification</a></p></div>
+OpenJDK</p></div></div></section><section data-background-image="https://media.giphy.com/media/tXL4FHPSnVJ0A/giphy.gif"></section><section><div class="slide-content"><div class="paragraph"><p>you are lucky because we just have 30 minutes ;)</p></div>
+<div class="paragraph"><p>goal of this presentation is to kickstart your adventure in OpenJDK</p></div>
+<div class="paragraph"><p>I will focus on core components and explaining vocabulary</p></div></div></section><section data-background-image="https://media.giphy.com/media/3o7ZeEZUzRjyvWuuIg/giphy.gif"></section><section id="openjdk"><h2>OpenJDK</h2><div class="slide-content"><div class="paragraph"><p>OpenJDK is an open-source implementation of <a href="https://docs.oracle.com/javase/specs/jvms/se18/html/index.html">The Java® Virtual Machine Specification</a></p></div>
 <div class="paragraph"><p>it is also known as HotSpot</p></div>
 <div class="paragraph"><p>is an open-sourced implementation of Sun&#8217;s original JVM<br>
 you can download it from <a href="https://github.com/openjdk/jdk" class="bare">https://github.com/openjdk/jdk</a></p></div></div></section></section>
@@ -424,9 +426,8 @@ chmod +x configure
 ./configure // make sure your java points to JDK 18 or 17, this is required for boot JDK
 make images
 make vscode-project // import project workspace into VSCode</pre></div></div></div></section>
-<section id="abstract_2"><h2>abstract</h2><div class="slide-content"><div class="ulist"><ul><li><p>JVM initialization</p></li><li><p>loading and verifying bytecode</p></li><li><p>bytecode interpreter</p></li><li><p>time for just-in-time compiler</p></li><li><p>safepoints and how we stop the world</p></li><li><p>garbage collector black magic</p></li></ul></div></div></section>
-<section id="jvm_initilization"><h2>JVM initilization</h2></section>
-<section id="loading_and_verifying_bytecode"><h2>loading and verifying bytecode</h2></section>
+<section id="abstract_2"><h2>abstract</h2><div class="slide-content"><div class="ulist"><ul><li><p>loading and verifying bytecode</p></li><li><p>bytecode interpreter</p></li><li><p>time for just-in-time compiler</p></li><li><p>safepoints and how we stop the world</p></li><li><p>garbage collector black magic</p></li></ul></div></div></section>
+<section><section id="loading_and_verifying_bytecode"><h2>loading and verifying bytecode</h2><div class="slide-content"><div class="paragraph"><p>OpenJDK HotSpot doesn&#8217;t know and understand Java (actually they are separate specifications)</p></div><div class="paragraph"><p>but it understands bytecode ;)</p></div></div></section><section id="loading_bytecode"><h2>loading bytecode</h2></section></section>
 <section><section id="bytecode_interpreter"><h2>bytecode interpreter</h2><div class="slide-content"><div class="paragraph"><p>this isn&#8217;t actual all that simple, because we have two different interpreters</p></div><div class="ulist"><ul><li><p>high level language version (aka c++ interpreter), actual interpretation of bytecodes,</p></li><li><p>assembly language version (aka template interpreter), generation of assembly code that creates and manages interpreter runtime frames</p></li></ul></div></div></section><section><div class="slide-content"><div class="paragraph"><p>src/hotspot/share/interpreter/abstractInterpreter.hpp</p></div>
 <div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">// This file contains the platform-independent parts
 // of the abstract interpreter and the abstract interpreter generator.
@@ -451,16 +452,188 @@ will work there (of course only in interpreted mode)</p></div>
   ConstantPoolCache*    cp = istate-&gt;constants(); // method()-&gt;constants()-&gt;cache()
 #ifdef LOTS_OF_REGS
   JavaThread*      THREAD = istate-&gt;thread();
-#else</code></pre></div></div></div></section></section>
-<section><section id="time_for_just_in_time_compiler"><h2>time for just-in-time compiler</h2><div class="slide-content"><div class="paragraph"><p>this isn&#8217;t actual all that simple,<br>
+#else</code></pre></div></div></div></section><section><div class="slide-content"><div class="paragraph"><p>interpreter uses messages to communicate with itself :)<br>
+and with frame manager (aka interpreter generator)</p></div>
+<div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">    enum messages {
+         no_request = 0,            // unused
+         initialize,                // Perform one time interpreter initializations (assumes all switches set)
+         // status message to C++ interpreter
+         method_entry,              // initial method entry to interpreter
+         method_resume,             // frame manager response to return_from_method request (assuming a frame to resume)
+         deopt_resume,              // returning from a native call into a deopted frame
+         deopt_resume2,             // deopt resume as a result of a PopFrame
+         got_monitors,              // frame manager response to more_monitors request
+         rethrow_exception,         // unwinding and throwing exception
+         // requests to frame manager from C++ interpreter
+         call_method,               // request for new frame from interpreter, manager responds with method_entry
+         return_from_method,        // request from interpreter to unwind, manager responds with method_continue
+         more_monitors,             // need a new monitor
+         throwing_exception,        // unwind stack and rethrow
+         popping_frame,             // unwind call and retry call
+         do_osr,                    // request this invocation be OSR's
+         early_return               // early return as commanded by jvmti
+    };</code></pre></div></div></div></section><section><div class="slide-content"><div class="imageblock"><img src="images/diag-881d8feb395c9a96277466fbe9300ebc.png" alt="Diagram"></div></div></section><section id="method_and_call_entry_point"><h2>method and call entry point</h2><div class="slide-content"><div class="paragraph"><p>a method in JVM can be either interpreted or compiled<br>
+(to complete a picture it can also be native or intrinsic)</p></div>
+<div class="paragraph"><p>from an interpreted method you can call either<br>
+other interpreted or compiled method<br>
+but how do you know if method has been compiled?<br>
+and how do you handle different logic to call interpreted vs compiled?</p></div></div></section><section><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">// src/hotspot/share/oops/method.hpp:Method
+
+// Entry point for calling both from and to the interpreter.
+  address _i2i_entry;           // All-args-on-stack calling convention
+  // Entry point for calling from compiled code, to compiled code if it exists
+  // or else the interpreter.
+  volatile address _from_compiled_entry;        // Cache of: _code ? _code-&gt;entry_point() : _adapter-&gt;c2i_entry()
+  // The entry point for calling both from and to compiled code is
+  // "_code-&gt;entry_point()".  Because of tiered compilation and de-opt, this
+  // field can come and go.  It can transition from NULL to not-null at any
+  // time (whenever a compile completes).  It can transition from not-null to
+  // NULL only at safepoints (because of a de-opt).
+  CompiledMethod* volatile _code;                       // Points to the corresponding piece of native code
+  volatile address           _from_interpreted_entry; // Cache of _code ? _adapter-&gt;i2c_entry() : _i2i_entry</code></pre></div></div></div></section><section id="frames"><h2>frames</h2><div class="slide-content"><div class="paragraph"><p>we have two kinds of frames, physical frames (aka frames) and virtual frames (aka vframes)</p></div></div></section><section id="physical_frame"><h2>physical frame</h2></section><section><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">class frame {
+ private:
+  // Instance variables:
+  intptr_t* _sp; // stack pointer (from Thread::last_Java_sp)
+  address   _pc; // program counter (the next instruction after the call)
+
+  CodeBlob* _cb; // CodeBlob that "owns" pc
+  enum deopt_state {
+    not_deoptimized,
+    is_deoptimized,
+    unknown
+  };
+
+  deopt_state _deopt_state;
+};</code></pre></div></div></div></section><section id="code_blob" class="highlight_section_title" data-background-image="https://media.giphy.com/media/y70jyPYRIL1sZOcRJF/giphy.gif"><h2>code blob</h2></section><section><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">// CodeBlob - superclass for all entries in the CodeCache.
+//
+// Subtypes are:
+//  CompiledMethod       : Compiled Java methods (include method that calls to native code)
+//   nmethod             : JIT Compiled Java methods
+//  RuntimeBlob          : Non-compiled method code; generated glue code
+//   BufferBlob          : Used for non-relocatable code such as interpreter, stubroutines, etc.
+//    AdapterBlob        : Used to hold C2I/I2C adapters
+//    VtableBlob         : Used for holding vtable chunks
+//    MethodHandlesAdapterBlob : Used to hold MethodHandles adapters
+//    OptimizedEntryBlob : Used for upcalls from native code
+//   RuntimeStub         : Call to VM runtime methods
+//   SingletonBlob       : Super-class for all blobs that exist in only one instance
+//    DeoptimizationBlob : Used for deoptimization
+//    ExceptionBlob      : Used for stack unrolling
+//    SafepointBlob      : Used to handle illegal instruction exceptions
+//    UncommonTrapBlob   : Used to handle uncommon traps
+//
+//
+// Layout : continuous in the CodeCache
+//   - header
+//   - relocation
+//   - content space
+//     - instruction space
+//   - data space</code></pre></div></div></div></section><section id="virtual_frame"><h2>virtual frame</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">// vframes are virtual stack frames representing source level activations.
+// A single frame may hold several source level activations in the case of
+// optimized code. The debugging stored with the optimized code enables
+// us to unfold a frame as a stack of vframes.
+// A cVFrame represents an activation of a non-java method.
+
+// The vframe inheritance hierarchy:
+// - vframe
+//   - javaVFrame
+//     - interpretedVFrame
+//     - compiledVFrame     ; (used for both compiled Java methods and native stubs)
+//   - externalVFrame
+//     - entryVFrame        ; special frame created when calling Java from C</code></pre></div></div></div></section></section>
+<section><section id="time_for_just_in_time_compiler"><h2>time for just-in-time compiler</h2><div class="slide-content"><div class="paragraph"><p>JIT (just-in-time compiler) in JVM was a major step in the world of JITs</p></div><div class="ulist"><ul><li><p>profile guided optimizations</p></li><li><p>speculating compilation (with traps and deoptimizations)</p></li><li><p>on-stack replacement</p></li><li><p>used SSA (single static assigment) form and "sea of nodes" (developed by Cliff Click)</p></li></ul></div></div></section><section id="it_takes_two"><h2>it takes two</h2><div class="slide-content"><div class="paragraph"><p>this isn&#8217;t actual all that simple,<br>
 because we have two different compilers<br>
 (plus GraalVM, thanks to JVMCI (JVM compiler interface))</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>yes, you can write your own compilers as plugins</p></div>
 <div class="paragraph"><p>(only if your are rich, <a href="https://www.azul.com/products/components/falcon-jit-compiler/">Azul Platform Prime’s Falcon JIT Compiler</a>)</p></div></div></section><section id="hotspot_compilers"><h2>HotSpot compilers</h2><div class="slide-content"><div class="paragraph"><p>C1 (aka client compiler) was originally design for better startup times, but it doesn&#8217;t generate optimal code</p></div>
-<div class="paragraph"><p>C2 (aka server compiler) is slower, but generates how quality, optmized, state of the art native code</p></div>
-<div class="paragraph"><p>at the moment we have tiered compilation enabled<br>
-(using both compilers)</p></div></div></section><section id="c2_code" class="highlight_section_title" data-background-image="https://media.giphy.com/media/zy9wp81bCIyzu/giphy.gif"><h2>C2 code</h2></section></section>
-<section id="safepoints_and_how_we_stop_the_world"><h2>safepoints and how we stop the world</h2></section>
-<section id="garbage_collector_black_magic"><h2>garbage collector black magic</h2></section></div></div><script src="reveal.js/js/reveal.js"></script><script>Array.prototype.slice.call(document.querySelectorAll('.slides section')).forEach(function(slide) {
+<div class="paragraph"><p>C2 (aka server compiler) is slower, but generates quality, optimized, state of the art native code</p></div>
+<div class="paragraph"><p>at the moment we have tiered compilation enabled by default<br>
+(using both compilers)</p></div></div></section><section id="c2_code" class="highlight_section_title" data-background-image="https://media.giphy.com/media/zy9wp81bCIyzu/giphy.gif"><h2>C2 code</h2></section><section id="need_for_speed" class="highlight_section_title" data-background-image="https://media.giphy.com/media/xTiTnFM0Cr2xcGUsVy/giphy.gif"><h2>need for speed</h2></section><section><div class="slide-content"><div class="paragraph"><p>so, who decides when code gets compiled?<br>
+(and deoptimized)</p></div>
+<div class="paragraph"><p><code>src/hotspot/share/compiler/compilationPolicy.hpp</code></p></div>
+<div class="paragraph"><p>let&#8217;s disassemble the first parts</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>The system supports 5 execution levels:</p></div>
+<div class="ulist"><ul><li><p>level 0 - interpreter</p></li><li><p>level 1 - C1 with full optimization (no profiling)</p></li><li><p>level 2 - C1 with invocation and backedge counters</p></li><li><p>level 3 - C1 with full profiling (level 2 + MDO)</p></li><li><p>level 4 - C2</p></li></ul></div></div></section><section id="wait_wat_profiling"><h2>wait? wat? profiling?</h2><div class="slide-content"><div class="paragraph"><p>JVM injects (both in interpreted and compiled code) instrumentation,
+to record how your code is used<br></p></div>
+<div class="paragraph"><p>not only how often method is called (aka counters)<br>
+but also taken branches, type profile, loop sizes and much more</p></div></div></section><section id="backedge_counters"><h2>backedge counters?</h2><div class="slide-content"><div class="paragraph"><p>invocation counter are pretty obvious</p></div>
+<div class="paragraph"><p>what the hell is backedge counter?</p></div>
+<div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-java hljs" data-noescape="true" data-lang="java">for(;;){
+
+} // increment backedge counter</code></pre></div></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Levels 0, 2 and 3 periodically notify the runtime about the current value of the counters (invocation counters and backedge counters). The frequency of these notifications is different at each level. These notifications are used by the policy to decide what transition to make.</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>when compilation policy decides that method should be compiled, it puts a method (a compile task) onto one of the compilation queues</p></div>
+<div class="paragraph"><p>by default C1 queue has one worker threads and C2 has two (it all depends on your machine)</p></div></div></section><section id="speculating_jit" data-background-image="https://media.giphy.com/media/Lw39ENuDr0SdO/giphy.gif"><h2>speculating JIT</h2></section><section id="your_code"><h2>your code</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-Java hljs" data-noescape="true" data-lang="Java">if(){
+  // lots of code
+} else {
+  // even more code
+}</code></pre></div></div></div></section><section id="your_code_compiled"><h2>your code, compiled</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-Java hljs" data-noescape="true" data-lang="Java">if(){
+  // lots of code
+} else {
+  uncommon_trap();
+}</code></pre></div></div></div></section><section id="uncommon_trap"><h2>uncommon trap</h2><div class="slide-content"><div class="paragraph"><p>it is a place in code of your compiled method<br>
+which was not compiled &amp; optimized<br>
+because of poor ROI<br>
+(dad joke)</p></div>
+<div class="paragraph"><p>which calls into JVM <code>Deoptimization::uncommon_trap</code></p></div>
+<div class="paragraph"><p><code>src/hotspot/share/runtime/deoptimization.hpp</code></p></div></div></section><section id="deopt_reason_action"><h2>deopt reason &amp; action</h2><div class="slide-content"><div class="paragraph"><p>DepotReason is a condition that caused deoptimization</p></div>
+<div class="ulist"><ul><li><p>unexpected null or zero divisor</p></li><li><p>unexpected array index</p></li><li><p>unexpected object class</p></li><li><p>unexpected object class in bimorphic inlining</p></li></ul></div></div></section><section id="deopt_action"><h2>deopt action</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">  // What action must be taken by the runtime?
+  enum DeoptAction {
+    Action_none,                  // just interpret, do not invalidate nmethod
+    Action_maybe_recompile,       // recompile the nmethod; need not invalidate
+    Action_reinterpret,           // invalidate the nmethod, reset IC, maybe recompile
+    Action_make_not_entrant,      // invalidate the nmethod, recompile (probably)
+    Action_make_not_compilable,   // invalidate the nmethod and do not compile
+    Action_LIMIT
+    // Note:  Keep this enum in sync. with _trap_action_name.
+  };</code></pre></div></div></div></section><section id="invalidate"><h2>invalidate?</h2><div class="slide-content"><div class="paragraph"><p>yes, we have queues and caches in OpenJDK compiler code ;)<br></p></div>
+<div class="paragraph"><p>generated code (which are not only compiled methods)<br>
+is kept in compile cache<br>
+(outside of JVM heap)</p></div></div></section><section id="not_entrant"><h2>not entrant?</h2><div class="slide-content"><div class="paragraph"><p>sometimes, when</p></div></div></section><section id="so_what_is_actually_happening"><h2>so what is actually happening?</h2><div class="slide-content"><div class="ulist"><ul><li><p>your compile frame needs to be converted into an interpreter frame</p></li><li><p>compiled method can be marked as not entrant, or even invalidated from code cache</p></li><li><p>invocation counters and method data can be reset</p></li></ul></div></div></section></section>
+<section><section id="safepoints_and_how_we_stop_the_world"><h2>safepoints and how we stop the world</h2><div class="slide-content"><div class="paragraph"><p>safepoints (to be precise global safepoint) is a mechanism<br>
+which is used to stop application threads when it is needed</p></div><div class="paragraph"><p>garbage collection cycle<br>
+revocation of biased locking<br>
+and other VM operations</p></div></div></section><section id="dirty_little_secret"><h2>dirty little secret</h2><div class="slide-content"><div class="paragraph"><p>you can think about safepoint as a global flag,
+which is polled by some code, sometimes</p></div>
+<div class="paragraph"><p>and if this flag ise true, application thread has to stop</p></div></div></section><section id="show_me_the_code"><h2>show me the code</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">class SafepointSynchronize : AllStatic {
+ public:
+  enum SynchronizeState {
+      _not_synchronized = 0,                   // Threads not synchronized at a safepoint. Keep this value 0.
+      _synchronizing    = 1,                   // Synchronizing in progress
+      _synchronized     = 2                    // All Java threads are running in native, blocked in OS or stopped at safepoint.
+                                               // VM thread and any NonJavaThread may be running.
+  };
+  // Threads might read this flag directly, without acquiring the Threads_lock:
+  static volatile SynchronizeState _state;
+};</code></pre></div></div></div></section><section><div class="slide-content"><div class="paragraph"><p>JVM injects safepoint poll at</p></div>
+<div class="ulist"><ul><li><p>exit of method</p></li><li><p>loop backedge</p></li><li><p>in interpret code</p></li><li><p>JNI critical blocks</p></li></ul></div></div></section><section><div class="slide-content"><div class="paragraph"><p>this means not all threads stop at the same time ;)</p></div>
+<div class="paragraph"><p>TTSP (time to safepoint) is a metric you are looking for</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>of course Java thread needs to notify global safepoint mechanism,
+that is has stopped at safepoint</p></div>
+<div class="paragraph"><p><code>src/hotspot/share/runtime/safepoint.hpp</code></p></div></div></section></section>
+<section><section id="garbage_collector_black_magic"><h2>garbage collector black magic</h2><div class="slide-content"><div class="paragraph"><p>OpenJDK garbage collectors implement tracing collectors,
+as you can expect GCs in OpenJDK are pluggable</p></div><div class="paragraph"><p>three key phases:</p></div><div class="ulist"><ul><li><p>reachability analisys from GC roots,</p></li><li><p>swapping unreachable objects</p></li><li><p>compacting memory (optional)</p></li></ul></div></div></section><section id="gc_roots"><h2>GC roots?</h2><div class="slide-content"><div class="paragraph"><p>GC roots are objects which are always reachable,<br>
+so we can safely start reachability analysis,<br>
+as object reachable from GC roots are reachable too</p></div>
+<div class="ulist"><ul><li><p>local variables</p></li><li><p>static fields</p></li><li><p>threads</p></li><li><p>JNI references</p></li></ul></div></div></section><section id="oopmap"><h2>OopMap</h2><div class="slide-content"><div class="paragraph"><p>things get complicated for compiled code,<br>
+as references can be store in CPU registers</p></div>
+<div class="paragraph"><p>OopMap is a data structure<br>
+which helps track references to objects</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>There are three kinds of OopMaps:</p></div>
+<div class="ulist"><ul><li><p>OopMaps for interpreted methods. They are computed lazily, i.e. when GC happens, by analyzing bytecode flow. InterpreterOopMaps are stored in OopMapCache.</p></li><li><p>OopMaps for JIT-compiled methods. They are generated during JIT-compilation and kept along with the compiled code so that VM can quickly find by instruction address the stack locations and the registers where the object references are held.</p></li><li><p>OopMaps for generated shared runtime stubs. These maps are constructed manually by the developers - authors of these runtime stubs.</p></li></ul></div>
+<div class="paragraph"><p>for more insights <code>src/hotspot/share/oops/generateOopMap.hpp</code></p></div></div></section><section id="allocation"><h2>allocation?</h2><div class="slide-content"><div class="paragraph"><p>yes, garbage collectors are responsible for object allocation too</p></div>
+<div class="paragraph"><p>in most cases they use technique called TLAB (Thread-Local Allocation Buffer)<br>
+<code>src/hotspot/share/gc/shared/threadLocalAllocBuffer.hpp</code></p></div>
+<div class="paragraph"><p>in short every thread gets its own space in the shared heap,<br>
+so it doesn&#8217;t have to compete with others</p></div></div></section><section id="tlab"><h2>TLAB</h2><div class="slide-content"><div class="paragraph"><p>TLABs are resized during garbage collection,<br>
+to better respond to allocation pressure</p></div>
+<div class="paragraph"><p>if object is bigger then buffer size,<br>
+it is allocated in shared space</p></div></div></section><section id="who_needs_barriers"><h2>who needs barriers ;)</h2><div class="slide-content"><div class="paragraph"><p>things get complicated when we want<br>
+to do some of the GC work<br>
+concurrently with your code</p></div>
+<div class="paragraph"><p>like reachability analisys,<br>
+swapping,<br>
+and compaction</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>we need a mechanism to notify JVM<br>
+when references changes in our code</p></div>
+<div class="paragraph"><p>barriers are small assembly code snipets,<br>
+injected on load or store of reference</p></div>
+<div class="paragraph"><p>(this needs cooperation between GC, interpreter and compilers)</p></div>
+<div class="paragraph"><p><code>src/hotspot/share/gc/shared/barrierSet.hpp</code></p></div></div></section><section id="card_marking"><h2>card marking</h2></section></section>
+<section id="thank_you"><h2>thank you!</h2></section></div></div><script src="reveal.js/js/reveal.js"></script><script>Array.prototype.slice.call(document.querySelectorAll('.slides section')).forEach(function(slide) {
   if (slide.getAttribute('data-background-color')) return;
   // user needs to explicitly say he wants CSS color to override otherwise we might break custom css or theme (#226)
   if (!(slide.classList.contains('canvas') || slide.classList.contains('background'))) return;

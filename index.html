@@ -544,7 +544,8 @@ and how do you handle different logic to call interpreted vs compiled?</p></div>
     unknown
   };
 
-  deopt_state _deopt_state;</code></pre></div></div></div></section><section id="code_blob" class="highlight_section_title" data-background-image="https://media.giphy.com/media/y70jyPYRIL1sZOcRJF/giphy.gif"><h2>code blob</h2></section><section><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">// CodeBlob - superclass for all entries in the CodeCache.
+  deopt_state _deopt_state;
+};</code></pre></div></div></div></section><section id="code_blob" class="highlight_section_title" data-background-image="https://media.giphy.com/media/y70jyPYRIL1sZOcRJF/giphy.gif"><h2>code blob</h2></section><section><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">// CodeBlob - superclass for all entries in the CodeCache.
 //
 // Subtypes are:
 //  CompiledMethod       : Compiled Java methods (include method that calls to native code)
@@ -616,7 +617,7 @@ The same predicate is used to control the transition from level 3 to level 4 (C2
   ConstMethod*      _constMethod;                // Method read-only data.
   MethodData*       _method_data;
   MethodCounters*   _method_counters;
-}</code></pre></div></div></div></section><section><div class="slide-content"><div class="paragraph"><p>MDO are instances of <code>MethodData</code>,<br>
+};</code></pre></div></div></div></section><section><div class="slide-content"><div class="paragraph"><p>MDO are instances of <code>MethodData</code>,<br>
 which are only use at compilation level 3,<br>
 (there are traces that it can be also used by interpreter)
 so they are not always available<br>
@@ -684,7 +685,7 @@ execution of the compiled code.</p></div></div></section><section id="speculatin
   uncommon_trap();
 }</code></pre></div></div></div></section><section id="uncommon_trap"><h2>uncommon trap</h2><div class="slide-content"><div class="paragraph"><p>this is a place in code of your compiled method<br>
 which calls into JVM <code>Deoptimization::uncommon_trap</code></p></div>
-<div class="paragraph"><p><code>src/hotspot/share/runtime/deoptimization.hpp</code></p></div></div></section><section id="deopt_reason_action"><h2>deopt reason &amp; action</h2><div class="slide-content"><div class="paragraph"><p>DepotReason is a condition that cause deoptimization</p></div>
+<div class="paragraph"><p><code>src/hotspot/share/runtime/deoptimization.hpp</code></p></div></div></section><section id="deopt_reason_action"><h2>deopt reason &amp; action</h2><div class="slide-content"><div class="paragraph"><p>DepotReason is a condition that caused deoptimization</p></div>
 <div class="ulist"><ul><li><p>unexpected null or zero divisor</p></li><li><p>unexpected array index</p></li><li><p>unexpected object class</p></li><li><p>unexpected object class in bimorphic inlining</p></li></ul></div></div></section><section id="deopt_action"><h2>deopt action</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">  // What action must be taken by the runtime?
   enum DeoptAction {
     Action_none,                  // just interpret, do not invalidate nmethod
