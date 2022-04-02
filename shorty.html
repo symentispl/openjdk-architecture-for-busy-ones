@@ -415,9 +415,9 @@ was created together with Krystian Zybała</p></div><div class="paragraph"><p>an
 into fundamental concepts in<br>
 OpenJDK</p></div></div></section><section data-background-image="https://media.giphy.com/media/tXL4FHPSnVJ0A/giphy.gif"></section><section><div class="slide-content"><div class="paragraph"><p>you are lucky because we just have 30 minutes ;)</p></div>
 <div class="paragraph"><p>goal of this presentation is to kickstart your adventure in OpenJDK</p></div>
-<div class="paragraph"><p>I will focus on core components and explaining vocabulary</p></div></div></section><section data-background-image="https://media.giphy.com/media/3o7ZeEZUzRjyvWuuIg/giphy.gif"></section><section id="openjdk"><h2>OpenJDK</h2><div class="slide-content"><div class="paragraph"><p>OpenJDK is an open-source implementation of <a href="https://docs.oracle.com/javase/specs/jvms/se18/html/index.html">The Java® Virtual Machine Specification</a></p></div>
+<div class="paragraph"><p>I will focus on core components and explaining vocabulary</p></div></div></section><section id="developers_realising_this_jvm_talk" class="highlight_section_title" data-background-image="https://media.giphy.com/media/3o7ZeEZUzRjyvWuuIg/giphy.gif"><h2>Developers realising this JVM talk</h2></section><section id="openjdk"><h2>OpenJDK</h2><div class="slide-content"><div class="paragraph"><p>OpenJDK is an open-source implementation of <a href="https://docs.oracle.com/javase/specs/jvms/se18/html/index.html">The Java® Virtual Machine Specification</a></p></div>
 <div class="paragraph"><p>it is also known as HotSpot</p></div>
-<div class="paragraph"><p>is an open-sourced implementation of Sun&#8217;s original JVM<br>
+<div class="paragraph"><p>is an open-sourced Sun&#8217;s original JVM<br>
 you can download it from <a href="https://github.com/openjdk/jdk" class="bare">https://github.com/openjdk/jdk</a></p></div></div></section></section>
 <section id="if_you_want_to_follow_along"><h2>if you want to follow along</h2><div class="slide-content"><div class="literalblock"><div class="content"><pre>git clone https://github.com/openjdk/jdk18
 cd jdk18
@@ -427,7 +427,21 @@ chmod +x configure
 make images
 make vscode-project // import project workspace into VSCode</pre></div></div></div></section>
 <section id="abstract_2"><h2>abstract</h2><div class="slide-content"><div class="ulist"><ul><li><p>loading and verifying bytecode</p></li><li><p>bytecode interpreter</p></li><li><p>time for just-in-time compiler</p></li><li><p>safepoints and how we stop the world</p></li><li><p>garbage collector black magic</p></li></ul></div></div></section>
-<section><section id="loading_and_verifying_bytecode"><h2>loading and verifying bytecode</h2><div class="slide-content"><div class="paragraph"><p>OpenJDK HotSpot doesn&#8217;t know and understand Java (actually they are separate specifications)</p></div><div class="paragraph"><p>but it understands bytecode ;)</p></div></div></section><section id="loading_bytecode"><h2>loading bytecode</h2></section></section>
+<section><section id="loading_and_verifying_bytecode"><h2>loading and verifying bytecode</h2><div class="slide-content"><div class="paragraph"><p>OpenJDK HotSpot doesn&#8217;t know and understand Java<br>
+(actually they are separate specifications)</p></div><div class="paragraph"><p>but it understands bytecode ;)</p></div></div></section><section id="loading_bytecode"><h2>loading bytecode</h2><div class="slide-content"><div class="paragraph"><p>there are few things that happen, during this process:</p></div>
+<div class="ulist"><ul><li><p>parsing bytecode streams</p></li><li><p>verification of bytecode</p></li><li><p>linking of call-sites (except <em>invokedynamic</em>)</p></li><li><p>allocating <code>Class</code> instance</p></li></ul></div></div></section><section><div class="slide-content"><div class="paragraph"><p>you can find entry point in <code>src/hotspot/share/prims/jvm.cpp::jvm_lookup_define_class</code></p></div>
+<div class="paragraph"><p>but real stuff happens in <code>SystemDictionary::resolve_class_from_stream</code></p></div></div></section><section id="verify"><h2>verify?</h2><div class="slide-content"><div class="paragraph"><p>anybody can generate classfile, we should not trust it<br>
+it is a process that makes sure bytecode makes sens<br>
+(some of the checks happen in <code>ClassFileParser</code>)</p></div>
+<div class="paragraph"><p><code>src/hotspot/share/classfile/verifier.cpp</code></p></div>
+<div class="paragraph"><p>for example if things on stack, match method parameters<br>
+or jumps are to valid instructions</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>JVM requires all classes that are loaded to be verified,<br>
+in order to maintain the security of the sandbox<br>
+and ensure that the code is safe to optimize</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>it uses a structure called <code>StackMapTable</code>,<br>
+which is required to be present in class files</p></div>
+<div class="paragraph"><p>it keeps information on what things are on stack<br>
+and local variable tables<br>
+at specific bci (bytecode index)</p></div></div></section></section>
 <section><section id="bytecode_interpreter"><h2>bytecode interpreter</h2><div class="slide-content"><div class="paragraph"><p>this isn&#8217;t actual all that simple, because we have two different interpreters</p></div><div class="ulist"><ul><li><p>high level language version (aka c++ interpreter), actual interpretation of bytecodes,</p></li><li><p>assembly language version (aka template interpreter), generation of assembly code that creates and manages interpreter runtime frames</p></li></ul></div></div></section><section><div class="slide-content"><div class="paragraph"><p>src/hotspot/share/interpreter/abstractInterpreter.hpp</p></div>
 <div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">// This file contains the platform-independent parts
 // of the abstract interpreter and the abstract interpreter generator.
@@ -585,7 +599,10 @@ because of poor ROI<br>
   };</code></pre></div></div></div></section><section id="invalidate"><h2>invalidate?</h2><div class="slide-content"><div class="paragraph"><p>yes, we have queues and caches in OpenJDK compiler code ;)<br></p></div>
 <div class="paragraph"><p>generated code (which are not only compiled methods)<br>
 is kept in compile cache<br>
-(outside of JVM heap)</p></div></div></section><section id="not_entrant"><h2>not entrant?</h2><div class="slide-content"><div class="paragraph"><p>sometimes, when</p></div></div></section><section id="so_what_is_actually_happening"><h2>so what is actually happening?</h2><div class="slide-content"><div class="ulist"><ul><li><p>your compile frame needs to be converted into an interpreter frame</p></li><li><p>compiled method can be marked as not entrant, or even invalidated from code cache</p></li><li><p>invocation counters and method data can be reset</p></li></ul></div></div></section></section>
+(outside of JVM heap)</p></div></div></section><section id="not_entrant"><h2>not entrant?</h2><div class="slide-content"><div class="paragraph"><p>sometimes, when things go wrong,<br>
+compiled method is marked not entrant<br>
+it means no other thread can enter it,<br>
+and later removed from code cache</p></div></div></section><section id="so_what_is_actually_happening"><h2>so what is actually happening?</h2><div class="slide-content"><div class="ulist"><ul><li><p>your compile frame needs to be converted into an interpreter frame</p></li><li><p>compiled method can be marked as not entrant, or even invalidated from code cache</p></li><li><p>invocation counters and method data can be reset</p></li></ul></div></div></section></section>
 <section><section id="safepoints_and_how_we_stop_the_world"><h2>safepoints and how we stop the world</h2><div class="slide-content"><div class="paragraph"><p>safepoints (to be precise global safepoint) is a mechanism<br>
 which is used to stop application threads when it is needed</p></div><div class="paragraph"><p>garbage collection cycle<br>
 revocation of biased locking<br>
@@ -632,7 +649,7 @@ when references changes in our code</p></div>
 <div class="paragraph"><p>barriers are small assembly code snipets,<br>
 injected on load or store of reference</p></div>
 <div class="paragraph"><p>(this needs cooperation between GC, interpreter and compilers)</p></div>
-<div class="paragraph"><p><code>src/hotspot/share/gc/shared/barrierSet.hpp</code></p></div></div></section><section id="card_marking"><h2>card marking</h2></section></section>
+<div class="paragraph"><p><code>src/hotspot/share/gc/shared/barrierSet.hpp</code></p></div></div></section></section>
 <section id="thank_you"><h2>thank you!</h2></section></div></div><script src="reveal.js/js/reveal.js"></script><script>Array.prototype.slice.call(document.querySelectorAll('.slides section')).forEach(function(slide) {
   if (slide.getAttribute('data-background-color')) return;
   // user needs to explicitly say he wants CSS color to override otherwise we might break custom css or theme (#226)
