@@ -49,7 +49,8 @@ goal of this presentation is to kickstart your adventure in OpenJDK
 
 I will focus on core components and explaining vocabulary
 
-=== !
+[role="highlight_section_title"]
+=== Developers realising this JVM talk
 
 image::https://media.giphy.com/media/3o7ZeEZUzRjyvWuuIg/giphy.gif[background]
 
@@ -59,7 +60,7 @@ OpenJDK is an open-source implementation of https://docs.oracle.com/javase/specs
 
 it is also known as HotSpot
 
-is an open-sourced implementation of Sun's original JVM +
+is an open-sourced Sun's original JVM +
 you can download it from https://github.com/openjdk/jdk[]
 
 == if you want to follow along
@@ -83,11 +84,51 @@ you can download it from https://github.com/openjdk/jdk[]
 
 == loading and verifying bytecode
 
-OpenJDK HotSpot doesn't know and understand Java (actually they are separate specifications)
+OpenJDK HotSpot doesn't know and understand Java +
+(actually they are separate specifications)
 
 but it understands bytecode ;)
 
 === loading bytecode
+
+there are few things that happen, during this process:
+
+* parsing bytecode streams
+* verification of bytecode
+* linking of call-sites (except _invokedynamic_)
+* allocating `Class` instance
+
+=== !
+
+you can find entry point in `src/hotspot/share/prims/jvm.cpp::jvm_lookup_define_class`
+
+but real stuff happens in `SystemDictionary::resolve_class_from_stream`
+
+=== verify?
+
+anybody can generate classfile, we should not trust it +
+it is a process that makes sure bytecode makes sens +
+(some of the checks happen in `ClassFileParser`)
+
+`src/hotspot/share/classfile/verifier.cpp`
+
+for example if things on stack, match method parameters +
+or jumps are to valid instructions
+
+=== !
+
+JVM requires all classes that are loaded to be verified, +
+in order to maintain the security of the sandbox +
+and ensure that the code is safe to optimize
+
+=== !
+
+it uses a structure called `StackMapTable`, +
+which is required to be present in class files
+
+it keeps information on what things are on stack +
+and local variable tables +
+at specific bci (bytecode index)
 
 == bytecode interpreter
 
@@ -473,7 +514,10 @@ is kept in compile cache +
 
 === not entrant?
 
-sometimes, when 
+sometimes, when things go wrong, +
+compiled method is marked not entrant +
+it means no other thread can enter it, +
+and later removed from code cache
 
 === so what is actually happening?
 
@@ -615,7 +659,5 @@ injected on load or store of reference
 (this needs cooperation between GC, interpreter and compilers)
 
 `src/hotspot/share/gc/shared/barrierSet.hpp`
-
-=== card marking
 
 == thank you!
