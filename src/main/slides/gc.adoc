@@ -7,13 +7,15 @@ Heap is initilized during creating the Universe.
 
 Algorithm is choose during creating the Universe
 
-image::https://media4.giphy.com/media/njZPp4pQ0g4fe/giphy.gif[background]
+image::https://media0.giphy.com/media/xUPGctUP1Z50BNlEpa/giphy.gif[background]
 
 === ! 
 
 But sometimes is different than we expect 
 
 Ergo, ergo, ergo.. 
+
+image::https://media.makeameme.org/created/kubernetes-take.jpg[]
 
 // init globals 
 // universe init
@@ -162,7 +164,7 @@ TLAB Size
 
 During starting the Universe then TLAB size is calculated 
 
-src/hotspot/share/gc/shared/threadLocalAllocBuffer.cpp
+`src/hotspot/share/gc/shared/threadLocalAllocBuffer.cpp`
 
 [source,cpp]
 -----
