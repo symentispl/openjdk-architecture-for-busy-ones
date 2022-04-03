@@ -1,8 +1,5 @@
 == JVM initialization
 
-=== OopMaps
-
-
 
 === safepoint 
 
@@ -168,3 +165,60 @@ It necessary for Project Loom for lazy stack processing
 // JavaThread::wait_for_object_deoptimization
 // SafepointMechanism::process(JavaThread *thread, bool allow_suspend)
 // (reachability) ( void StackWatermark::start_processing_impl(void* context) (TODO)
+
+=== OopMaps
+
+OopMaps contain a list of all registers and stack-slots containing oops (so
+they can be updated by GC)
+
+OopMaps also contain a list of derived-pointer base-pointer pairs. 
+
+This oopmap will only be used if we are unwinding the stack
+
+// The functions in this file builds OopMaps after all scheduling is done.
+//
+// OopMaps contain a list of all registers and stack-slots containing oops (so
+// they can be updated by GC).  OopMaps also contain a list of derived-pointer
+// base-pointer pairs.  When the base is moved, the derived pointer moves to
+// follow it.  Finally, any registers holding callee-save values are also
+// recorded.  These might contain oops, but only the caller knows.
+//
+// BuildOopMaps implements a simple forward reaching-defs solution.  At each
+// GC point we'll have the reaching-def Nodes.  If the reaching Nodes are
+// typed as pointers (no offset), then they are oops.  Pointers+offsets are
+// derived pointers, and bases can be found from them.  Finally, we'll also
+// track reaching callee-save values.  Note that a copy of a callee-save value
+// "kills" it's source, so that only 1 copy of a callee-save value is alive at
+// a time.
+//
+// We run a simple bitvector liveness pass to help trim out dead oops.  Due to
+// irreducible loops, we can have a reaching def of an oop that only reaches
+// along one path and no way to know if it's valid or not on the other path.
+// The bitvectors are quite dense and the liveness pass is fast.
+//
+// At GC points, we consult this information to build OopMaps.  All reaching
+// defs typed as oops are added to the OopMap.  Only 1 instance of a
+// callee-save register can be recorded.  For derived pointers, we'll have to
+// find and record the register holding the base.
+//
+// The reaching def's is a simple 1-pass worklist approach.  I tried a clever
+// breadth-first approach but it was worse (showed O(n^2) in the
+// pick-next-block code).
+//
+// The relevant data is kept in a struct of arrays (it could just as well be
+// an array of structs, but the struct-of-arrays is generally a little more
+// efficient).  The arrays are indexed by register number (including
+// stack-slots as registers) and so is bounded by 200 to 300 elements in
+// practice.  One array will map to a reaching def Node (or NULL for
+// conflict/dead).  The other array will map to a callee-saved register or
+// OptoReg::Bad for not-callee-saved.
+
+ 
+  // Push an abi_reg_args-frame and store all registers which may be live.
+  // If requested, create an OopMap: Record volatile registers as
+  // callee-save values in an OopMap so their save locations will be
+  // propagated to the RegisterMap of the caller frame during
+  // StackFrameStream construction (needed for deoptimization; see
+  // compiledVFrame::create_stack_value).
+  // If return_pc_adjustment != 0 adjust the return pc by return_pc_adjustment.
+  // Updated return pc is returned in R31 (if not return_pc_is_pre_saved).
