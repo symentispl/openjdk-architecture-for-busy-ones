@@ -2,35 +2,77 @@
 
 === OopMaps
 
+
+
 === safepoint 
 
-// Roll all threads forward to a safepoint and suspend them all
-// void SafepointSynchronize::begin() 
+[source,cpp]
+----
+SafepointMechanism::default_initialize()
+----
 
+=== !
 
-//  1. Running interpreted
-//     When executing branching/returning byte codes interpreter
-//     checks if the poll is armed, if so blocks in SS::block().
-//  2. Running in native code
-//     When returning from the native code, a Java thread must check
-//     the safepoint _state to see if we must block.  If the
-//     VM thread sees a Java thread in native, it does
-//     not wait for this thread to block.  The order of the memory
-//     writes and reads of both the safepoint state and the Java
-//     threads state is critical.  In order to guarantee that the
-//     memory writes are serialized with respect to each other,
-//     the VM thread issues a memory barrier instruction.
-//  3. Running compiled Code
-//     Compiled code reads the local polling page that
-//     is set to fault if we are trying to get to a safepoint.
-//  4. Blocked
-//     A thread which is blocked will not be allowed to return from the
-//     block condition until the safepoint operation is complete.
-//  5. In VM or Transitioning between states
-//     If a Java thread is currently running in the VM or transitioning
-//     between states, the safepointing code will poll the thread state
-//     until the thread blocks itself when it attempts transitions to a
-//     new state or locking a safepoint checked monitor.
+ Roll all threads forward to a safepoint and suspend them all
+
+[source, cpp]
+----
+ void SafepointSynchronize::begin() 
+----
+
+=== !
+
+.Safe point events 
+
+* Deoptimization
+* PrintThreads
+* PrintJNI
+* FindDeadlock
+* ThreadDump
+* EnableBiasLocking
+* RevokeBias
+* HeapDumper
+* GetAllStackTrace
+
+=== !
+
+NIO Mapped Byte Buffers 
+Counted loops
+Array copying 
+JNI Critical Regions 
+JNI Handle Allocations
+Large object initialization 
+
+=== !
+
+.Code phase and Safepoint
+ * Running interpreted
+    When executing branching/returning byte codes interpreter
+    checks if the poll is armed, if so blocks in SS::block().
+ 
+ *  Running in native code
+    When returning from the native code, a Java thread must check
+    the safepoint _state to see if we must block.  If the
+    VM thread sees a Java thread in native, it does
+    not wait for this thread to block.  The order of the memory
+    writes and reads of both the safepoint state and the Java
+    threads state is critical.  In order to guarantee that the
+    memory writes are serialized with respect to each other,
+    the VM thread issues a memory barrier instruction.
+ 
+ *  Running compiled Code
+    Compiled code reads the local polling page that
+    is set to fault if we are trying to get to a safepoint.
+
+ *  Blocked
+    A thread which is blocked will not be allowed to return from the
+    block condition until the safepoint operation is complete.
+
+ *  In VM or Transitioning between states
+    If a Java thread is currently running in the VM or transitioning
+    between states, the safepointing code will poll the thread state
+    until the thread blocks itself when it attempts transitions to a
+    new state or locking a safepoint checked monitor.
 
 // during creating vm 
 // SafepointMechanism::default_initialize
