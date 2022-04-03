@@ -448,22 +448,12 @@ new state or locking a safepoint checked monitor.</p></li></ul></div></div></sec
 any other uses generate an oopmap but do not save it in the cache.</p></div></div></section><section id="make_stack_processing_lazy_cooperative_concurrent_and_incremental"><h2>Make stack processing lazy, cooperative, concurrent, and incremental.</h2></section><section id="remove_all_other_per_thread_root_processing_from_zgc_safepoints"><h2>Remove all other per-thread root processing from ZGC safepoints.</h2></section><section id="provide_a_mechanism_by_which_other_hotspot_subsystems_can_lazily_process_stacks"><h2>Provide a mechanism by which other HotSpot subsystems can lazily process stacks.</h2></section><section id="stack_watermark"><h2>Stack watermark</h2><div class="slide-content"><div class="paragraph"><p>All GC operations that scale with the size of the heap and the size of metaspace out of safepoint operations
 and into concurrent phases.</p></div>
 <div class="paragraph"><p><code>per-thread processing</code></p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>The only activities still done in GC safepoints are a subset of root processing and a time-bounded marking termination operation.</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Project Loom</p></div>
-<div class="paragraph"><p>It necessary for Project Loom for lazy stack processing</p></div></div></section><section id="oopmaps"><h2>OopMaps</h2><div class="slide-content"><div class="paragraph"><p>OopMaps contain a list of all registers and stack-slots containing oops (so
+<div class="paragraph"><p>It necessary for Project Loom for lazy stack processing</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>OopMaps</p></div>
+<div class="paragraph"><p>OopMaps contain a list of all registers and stack-slots containing oops (so
 they can be updated by GC)</p></div>
 <div class="paragraph"><p>OopMaps also contain a list of derived-pointer base-pointer pairs.</p></div>
-<div class="paragraph"><p>This oopmap will only be used if we are unwinding the stack</p></div>
-<div class="literalblock"><div class="content"><pre>  // Push an abi_reg_args-frame and store all registers which may be live.
-  // If requested, create an OopMap: Record volatile registers as
-  // callee-save values in an OopMap so their save locations will be
-  // propagated to the RegisterMap of the caller frame during
-  // StackFrameStream construction (needed for deoptimization; see
-  // compiledVFrame::create_stack_value).
-  // If return_pc_adjustment != 0 adjust the return pc by return_pc_adjustment.
-  // Updated return pc is returned in R31 (if not return_pc_is_pre_saved).
-== classloaders</pre></div></div>
-<div class="paragraph"><p>bootstrap, runtime, application</p></div>
-<div class="paragraph"><p><code>src/hotspot/share/runtime/init.cpp</code></p></div>
-<div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">jint init_globals() {
+<div class="paragraph"><p>This oopmap will only be used if we are unwinding the stack</p></div></div></section></section>
+<section><section id="classloaders"><h2>classloaders</h2><div class="slide-content"><div class="paragraph"><p>bootstrap, runtime, application</p></div><div class="paragraph"><p><code>src/hotspot/share/runtime/init.cpp</code></p></div><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">jint init_globals() {
   ...
   classLoader_init1();
   ...
@@ -477,23 +467,15 @@ they can be updated by GC)</p></div>
     interk-&gt;link_class_impl(CHECK_false);
   }</code></pre></div></div></div></section><section id="linking_with_verfication_together"><h2>Linking with verfication together</h2></section><section id="verfication_bytecode"><h2>Verfication bytecode</h2><div class="slide-content"><div class="paragraph"><p>src/hotspot/share/interpreter/abstractInterpreter.hpp</p></div></div></section><section id="check_constraints"><h2>Check constraints</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp"> SystemDictionaryShared::check_linking_constraints</code></pre></div></div></div></section><section id="vtable"><h2>vTable</h2><div class="slide-content"><div class="paragraph"><p>Initialize the vtable and interface table after methods have been rewritten since rewrite may fabricate new methods also does loader constraint checking</p></div></div></section><section id="stackmap"><h2>stackmap</h2><div class="slide-content"><div class="paragraph"><p>Uses to preverification of Java classes
 Each stack_map_frame structure specifies the type state at a particular bytecode offset.</p></div>
-<div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">     StackMapTable_attribute {
-       u2 attribute_name_index;
-       u4 attribute_length;
-       u2 number_of_entries;
-       stack_map_frame_entries[number_of_entries];
-     }</code></pre></div></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Stackmap matching</p></div>
+<div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-c hljs" data-noescape="true" data-lang="c">StackMapTable_attribute {
+  u2 attribute_name_index;
+  u4 attribute_length;
+  u2 number_of_entries;
+  stack_map_frame_entries[number_of_entries];
+}</code></pre></div></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Stackmap matching</p></div>
 <div class="paragraph"><p>Match and/or update current_frame to the frame in stackmap table with
-specified offset and frame index. Return true if the two frames match.</p></div>
-<div class="paragraph"><p>The values of match and update are:                  _match__update</p></div>
-<div class="paragraph"><p>checking a branch target:                             true   false
-checking an exception handler:                        true   false
-linear bytecode verification following an
-unconditional branch:                                 false  true
-linear bytecode verification not following an
-unconditional branch:                                 true   true
-== bytecode interpreter</p></div>
-<div class="ulist"><ul><li><p>bytecode interpreter and generator interpreter</p></li><li><p>method calls and entry points</p></li><li><p>exception handling</p></li><li><p>object allocation and cooperation with GC</p></li><li><p>stack &amp; local var table</p></li><li><p>physical and virtual frames</p></li><li><p>const method, method data and method counters</p></li></ul></div></div></section></section>
+specified offset and frame index. Return true if the two frames match.</p></div></div></section></section>
+<section id="bytecode_interpreter"><h2>bytecode interpreter</h2><div class="slide-content"><div class="ulist"><ul><li><p>bytecode interpreter and generator interpreter</p></li><li><p>method calls and entry points</p></li><li><p>exception handling</p></li><li><p>object allocation and cooperation with GC</p></li><li><p>stack &amp; local var table</p></li><li><p>physical and virtual frames</p></li><li><p>const method, method data and method counters</p></li></ul></div></div></section>
 <section><section id="jvm_interpreter"><h2>JVM interpreter</h2><div class="slide-content"><div class="paragraph"><p>this isn&#8217;t actual all that simple, because we have two different interpreters</p></div><div class="ulist"><ul><li><p>high level language version (aka c++ interpreter), actual interpretation of bytecodes,</p></li><li><p>assembly language version (aka template interpreter), generation of assembly code that creates and manages interpreter runtime frames</p></li></ul></div></div></section><section><div class="slide-content"><div class="paragraph"><p>src/hotspot/share/interpreter/abstractInterpreter.hpp</p></div>
 <div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">// This file contains the platform-independent parts
 // of the abstract interpreter and the abstract interpreter generator.
