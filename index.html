@@ -420,7 +420,69 @@ chmod +x configure
 ./configure // make sure your java points to JDK 17 or 16, this is required for boot JDK
 make images
 make vscode-project // import project workspace into VSCode</pre></div></div></div></section>
-<section><section id="jvm_initialization"><h2>JVM initialization</h2></section><section id="safepoint"><h2>safepoint</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">SafepointMechanism::default_initialize()</code></pre></div></div></div></section><section><div class="slide-content"><div class="literalblock"><div class="content"><pre>Roll all threads forward to a safepoint and suspend them all</pre></div></div>
+<section><section id="jvm_initialization" data-background-image="https://media4.giphy.com/media/njZPp4pQ0g4fe/giphy.gif"><h2>JVM initialization</h2><div class="slide-content"></div></section><section><div class="slide-content"><div class="paragraph"><p><code>src/hotspot/share/runtime/thread.cpp</code></p></div>
+<div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp"> // Initialize global data structures and create system classes in heap
+  vm_init_globals();</code></pre></div></div></div></section><section><div class="slide-content"><div class="paragraph"><p>init_globals</p></div>
+<div class="paragraph"><p><code>src/hotspot/share/runtime/thread.cpp</code></p></div>
+<div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">jint init_globals() {
+  management_init();
+  JvmtiExport::initialize_oop_storage();
+  bytecodes_init();
+  classLoader_init1();
+  compilationPolicy_init();
+  codeCache_init();
+  VM_Version_init();              // depends on codeCache_init for emitting code
+  stubRoutines_init1();
+  jint status = universe_init();  // dependent on codeCache_init and
+                                  // stubRoutines_init1 and metaspace_init.
+  if (status != JNI_OK)
+    return status;
+
+  AsyncLogWriter::initialize();
+  gc_barrier_stubs_init();  // depends on universe_init, must be before interpreter_init
+  interpreter_init_stub();  // before methods get loaded
+  accessFlags_init();
+  InterfaceSupport_init();
+  VMRegImpl::set_regName(); // need this before generate_stubs (for printing oop maps).
+  SharedRuntime::generate_stubs();
+  universe2_init();  // dependent on codeCache_init and stubRoutines_init1
+  javaClasses_init();// must happen after vtable initialization, before referenceProcessor_init
+  interpreter_init_code();  // after javaClasses_init and before any method gets linked
+  referenceProcessor_init();
+  jni_handles_init();
+#if INCLUDE_VM_STRUCTS
+  vmStructs_init();
+#endif // INCLUDE_VM_STRUCTS
+
+  vtableStubs_init();
+  InlineCacheBuffer_init();
+  compilerOracle_init();
+  dependencyContext_init();
+  dependencies_init();
+
+  if (!compileBroker_init()) {
+    return JNI_EINVAL;
+  }
+#if INCLUDE_JVMCI
+  if (EnableJVMCI) {
+    JVMCI::initialize_globals();
+  }
+#endif
+
+  if (!universe_post_init()) {
+    return JNI_ERR;
+  }
+  stubRoutines_init2(); // note: StubRoutines need 2-phase init
+  MethodHandles::generate_adapters();
+
+  // All the flags that get adjusted by VM_Version_init and os::init_2
+  // have been set so dump the flags now.
+  if (PrintFlagsFinal || PrintFlagsRanges) {
+    JVMFlag::printFlags(tty, false, PrintFlagsRanges);
+  }
+
+  return JNI_OK;
+}</code></pre></div></div></div></section><section id="safepoint"><h2>safepoint</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">SafepointMechanism::default_initialize()</code></pre></div></div></div></section><section><div class="slide-content"><div class="literalblock"><div class="content"><pre>Roll all threads forward to a safepoint and suspend them all</pre></div></div>
 <div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp"> void SafepointSynchronize::begin()</code></pre></div></div></div></section><section><div class="slide-content"><div class="ulist"><div class="title">Safe point events</div><ul><li><p>Deoptimization</p></li><li><p>PrintThreads</p></li><li><p>PrintJNI</p></li><li><p>FindDeadlock</p></li><li><p>ThreadDump</p></li><li><p>EnableBiasLocking</p></li><li><p>RevokeBias</p></li><li><p>HeapDumper</p></li><li><p>GetAllStackTrace</p></li></ul></div></div></section><section><div class="slide-content"><div class="ulist"><div class="title">But also</div><ul><li><p>NIO Mapped Byte Buffers</p></li><li><p>Counted loops</p></li><li><p>Array copying</p></li><li><p>JNI Critical Regions</p></li><li><p>JNI Handle Allocations</p></li><li><p>Large object initialization</p></li></ul></div></div></section><section><div class="slide-content"><div class="ulist"><div class="title">Code phase and Safepoint</div><ul><li><p>Running interpreted
 When executing branching/returning byte codes interpreter
 checks if the poll is armed, if so blocks in SS::block().</p></li><li><p>Running in native code
@@ -730,8 +792,9 @@ which calls into JVM <code>Deoptimization::uncommon_trap</code></p></div>
     Action_LIMIT
     // Note:  Keep this enum in sync. with _trap_action_name.
   };</code></pre></div></div></div></section><section id="so_what_is_actually_happening"><h2>so what is actually happening?</h2><div class="slide-content"><div class="ulist"><ul><li><p>your compile frame needs to be converted into an interpreter frame</p></li><li><p>compiled method can be marked as not entrant, or even invalidated from code cache</p></li><li><p>invocation counters and method data can be reset</p></li></ul></div></div></section></section>
-<section><section id="heap"><h2>heap</h2><div class="slide-content"><div class="paragraph"><p>Heap is initilized during creating the Universe.</p></div></div></section><section id="gc" data-background-image="https://media4.giphy.com/media/njZPp4pQ0g4fe/giphy.gif"><h2>GC</h2><div class="slide-content"><div class="paragraph"><p>Algorithm is choose during creating the Universe</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>But sometimes is different than we expect</p></div>
-<div class="paragraph"><p>Ergo, ergo, ergo..</p></div></div></section><section id="roots"><h2>roots</h2><div class="slide-content"><div class="paragraph"><p>Root is basic concept in GC cycle</p></div>
+<section><section id="heap"><h2>heap</h2><div class="slide-content"><div class="paragraph"><p>Heap is initilized during creating the Universe.</p></div></div></section><section id="gc" data-background-image="https://media0.giphy.com/media/xUPGctUP1Z50BNlEpa/giphy.gif"><h2>GC</h2><div class="slide-content"><div class="paragraph"><p>Algorithm is choose during creating the Universe</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>But sometimes is different than we expect</p></div>
+<div class="paragraph"><p>Ergo, ergo, ergo..</p></div>
+<div class="imageblock"><img src="https://media.makeameme.org/created/kubernetes-take.jpg" alt="kubernetes take"></div></div></section><section id="roots"><h2>roots</h2><div class="slide-content"><div class="paragraph"><p>Root is basic concept in GC cycle</p></div>
 <div class="paragraph"><p>Root is thread, local variables, static fields, final fields.</p></div></div></section><section id="vm_threads_are_roots"><h2>VM threads are roots</h2></section><section id="bariers" data-background-image="https://media2.giphy.com/media/wLJSjc5fzMJtS/giphy.gif"><h2>bariers</h2><div class="slide-content"><div class="paragraph"><p>Barriers need JIT help for speed</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>G1, Shendandoah, ZGC</p></div>
 <div class="paragraph"><p>Only these GCs use barriers</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Barriers</p></div>
 <div class="paragraph"><p>Barrier is simple assmebly code injected in particular place
@@ -751,7 +814,7 @@ mov     %rax,%r10
 add     $0x10,%r10</pre></div></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Outside TLAB allocation (aka global allocation)</p></div>
 <div class="paragraph"><p>We need take slow path it means</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>TLAB Size</p></div>
 <div class="paragraph"><p>During starting the Universe then TLAB size is calculated</p></div>
-<div class="paragraph"><p>src/hotspot/share/gc/shared/threadLocalAllocBuffer.cpp</p></div>
+<div class="paragraph"><p><code>src/hotspot/share/gc/shared/threadLocalAllocBuffer.cpp</code></p></div>
 <div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">size_t ThreadLocalAllocBuffer::initial_desired_size() {
   size_t init_sz = 0;
 
