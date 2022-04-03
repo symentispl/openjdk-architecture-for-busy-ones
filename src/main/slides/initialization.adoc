@@ -45,33 +45,33 @@ SafepointMechanism::default_initialize()
 === !
 
 .Code phase and Safepoint
- * Running interpreted
-    When executing branching/returning byte codes interpreter
-    checks if the poll is armed, if so blocks in SS::block().
- 
- *  Running in native code
-    When returning from the native code, a Java thread must check
-    the safepoint _state to see if we must block.  If the
-    VM thread sees a Java thread in native, it does
-    not wait for this thread to block.  The order of the memory
-    writes and reads of both the safepoint state and the Java
-    threads state is critical.  In order to guarantee that the
-    memory writes are serialized with respect to each other,
-    the VM thread issues a memory barrier instruction.
- 
- *  Running compiled Code
-    Compiled code reads the local polling page that
-    is set to fault if we are trying to get to a safepoint.
+* Running interpreted
+When executing branching/returning byte codes interpreter
+checks if the poll is armed, if so blocks in SS::block().
 
- *  Blocked
-    A thread which is blocked will not be allowed to return from the
-    block condition until the safepoint operation is complete.
+*  Running in native code
+When returning from the native code, a Java thread must check
+the safepoint _state to see if we must block.  If the
+VM thread sees a Java thread in native, it does
+not wait for this thread to block.  The order of the memory
+writes and reads of both the safepoint state and the Java
+threads state is critical.  In order to guarantee that the
+memory writes are serialized with respect to each other,
+the VM thread issues a memory barrier instruction.
 
- *  In VM or Transitioning between states
-    If a Java thread is currently running in the VM or transitioning
-    between states, the safepointing code will poll the thread state
-    until the thread blocks itself when it attempts transitions to a
-    new state or locking a safepoint checked monitor.
+*  Running compiled Code
+Compiled code reads the local polling page that
+is set to fault if we are trying to get to a safepoint.
+
+*  Blocked
+A thread which is blocked will not be allowed to return from the
+block condition until the safepoint operation is complete.
+
+*  In VM or Transitioning between states
+If a Java thread is currently running in the VM or transitioning
+between states, the safepointing code will poll the thread state
+until the thread blocks itself when it attempts transitions to a
+new state or locking a safepoint checked monitor.
 
 // during creating vm 
 // SafepointMechanism::default_initialize
@@ -166,7 +166,9 @@ It necessary for Project Loom for lazy stack processing
 // SafepointMechanism::process(JavaThread *thread, bool allow_suspend)
 // (reachability) ( void StackWatermark::start_processing_impl(void* context) (TODO)
 
-=== OopMaps
+=== !
+
+OopMaps
 
 OopMaps contain a list of all registers and stack-slots containing oops (so
 they can be updated by GC)
@@ -213,12 +215,11 @@ This oopmap will only be used if we are unwinding the stack
 // conflict/dead).  The other array will map to a callee-saved register or
 // OptoReg::Bad for not-callee-saved.
 
- 
-  // Push an abi_reg_args-frame and store all registers which may be live.
-  // If requested, create an OopMap: Record volatile registers as
-  // callee-save values in an OopMap so their save locations will be
-  // propagated to the RegisterMap of the caller frame during
-  // StackFrameStream construction (needed for deoptimization; see
-  // compiledVFrame::create_stack_value).
-  // If return_pc_adjustment != 0 adjust the return pc by return_pc_adjustment.
-  // Updated return pc is returned in R31 (if not return_pc_is_pre_saved).
+// Push an abi_reg_args-frame and store all registers which may be live.
+// If requested, create an OopMap: Record volatile registers as
+// callee-save values in an OopMap so their save locations will be
+// propagated to the RegisterMap of the caller frame during
+// StackFrameStream construction (needed for deoptimization; see
+// compiledVFrame::create_stack_value).
+// If return_pc_adjustment != 0 adjust the return pc by return_pc_adjustment.
+// Updated return pc is returned in R31 (if not return_pc_is_pre_saved).

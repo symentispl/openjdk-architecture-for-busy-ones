@@ -82,27 +82,28 @@ Initialize the vtable and interface table after methods have been rewritten sinc
 
 Uses to preverification of Java classes  
 Each stack_map_frame structure specifies the type state at a particular bytecode offset. 
-[source,cpp]
+[source,c]
 ----
-     StackMapTable_attribute {
-       u2 attribute_name_index;
-       u4 attribute_length;
-       u2 number_of_entries;
-       stack_map_frame_entries[number_of_entries];
-     }
+StackMapTable_attribute {
+  u2 attribute_name_index;
+  u4 attribute_length;
+  u2 number_of_entries;
+  stack_map_frame_entries[number_of_entries];
+}
 ----
 
 === !
+
 Stackmap matching
 
 Match and/or update current_frame to the frame in stackmap table with
 specified offset and frame index. Return true if the two frames match.
 
-The values of match and update are:                  _match__update
+// The values of match and update are:                  _match__update
 
-checking a branch target:                             true   false
-checking an exception handler:                        true   false
-linear bytecode verification following an
-unconditional branch:                                 false  true
-linear bytecode verification not following an
-unconditional branch:                                 true   true
+// checking a branch target:                             true   false
+// checking an exception handler:                        true   false
+// linear bytecode verification following an
+// unconditional branch:                                 false  true
+// linear bytecode verification not following an
+// unconditional branch:                                 true   true
