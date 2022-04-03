@@ -36,12 +36,14 @@ SafepointMechanism::default_initialize()
 
 === !
 
-NIO Mapped Byte Buffers 
-Counted loops
-Array copying 
-JNI Critical Regions 
-JNI Handle Allocations
-Large object initialization 
+.But also
+
+* NIO Mapped Byte Buffers 
+* Counted loops
+* Array copying 
+* JNI Critical Regions 
+* JNI Handle Allocations
+* Large object initialization 
 
 === !
 
@@ -121,6 +123,7 @@ Always process three frames when starting an iteration.
 Concurrent Thread-Stack Processing
 
 === !
+
 Remove thread-stack processing from ZGC safepoints.
 
 It also available in Shenandoah 
