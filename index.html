@@ -403,7 +403,10 @@ TeX: { equationNumbers: { autoNumber: "none" } }
 link.rel = 'stylesheet';
 link.type = 'text/css';
 link.href = window.location.search.match( /print-pdf/gi ) ? "reveal.js/css/print/pdf.css" : "reveal.js/css/print/paper.css";
-document.getElementsByTagName( 'head' )[0].appendChild( link );</script><link rel="stylesheet" href="css/custom.css"></head><body><div class="reveal"><div class="slides"><section class="title" data-state="title" data-background-image="images/pexels-pixabay-159275.jpg"><h1>Jakże vspaniała maszyna</h1><p class="author"><small>Architektura OpenJDK dla upartych</small></p></section><section><section id="about_us"><h2>about us</h2></section><section id="krystian_zybała"><h2>Krystian Zybała</h2></section><section id="jarosław_pałka"><h2>Jarosław Pałka</h2><div class="slide-content"><div class="paragraph"><p>Neo4j (a graph database) performance engineer</p></div>
+document.getElementsByTagName( 'head' )[0].appendChild( link );</script><link rel="stylesheet" href="css/custom.css"></head><body><div class="reveal"><div class="slides"><section class="title" data-state="title" data-background-image="images/pexels-pixabay-159275.jpg"><h1>Jakże vspaniała maszyna</h1><p class="author"><small>Architektura OpenJDK dla upartych</small></p></section><section><section id="about_us"><h2>about us</h2></section><section id="krystian_zybała"><h2>Krystian Zybała</h2><div class="slide-content"><div class="paragraph"><p>Principal Java engineer</p></div>
+<div class="paragraph"><p>geek JVM internals, real-time programming, Apache Kafka, Cassandra</p></div>
+<div class="paragraph"><p>speaker, coder</p></div>
+<div class="paragraph"><p>F1 Fan (Red Bull Racing)</p></div></div></section><section id="jarosław_pałka"><h2>Jarosław Pałka</h2><div class="slide-content"><div class="paragraph"><p>Neo4j (a graph database) performance engineer</p></div>
 <div class="paragraph"><p>over 20 years with JVM,<br>
 since early days of no native threads and,<br>
 no JIT and slow as hell GC</p></div>
@@ -417,7 +420,31 @@ chmod +x configure
 ./configure // make sure your java points to JDK 17 or 16, this is required for boot JDK
 make images
 make vscode-project // import project workspace into VSCode</pre></div></div></div></section>
-<section><section id="jvm_initialization"><h2>JVM initialization</h2></section><section id="oopmaps"><h2>OopMaps</h2></section><section id="safepoint"><h2>safepoint</h2></section><section id="stack_processing"><h2>stack processing</h2><div class="slide-content"><div class="paragraph"><p>During safepoint each thread stack is processing</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Always process three frames when starting an iteration.</p></div>
+<section><section id="jvm_initialization"><h2>JVM initialization</h2></section><section id="oopmaps"><h2>OopMaps</h2></section><section id="safepoint"><h2>safepoint</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp">SafepointMechanism::default_initialize()</code></pre></div></div></div></section><section><div class="slide-content"><div class="literalblock"><div class="content"><pre>Roll all threads forward to a safepoint and suspend them all</pre></div></div>
+<div class="listingblock"><div class="content"><pre class="highlightjs highlight"><code class="language-cpp hljs" data-noescape="true" data-lang="cpp"> void SafepointSynchronize::begin()</code></pre></div></div></div></section><section><div class="slide-content"><div class="ulist"><div class="title">Safe point events</div><ul><li><p>Deoptimization</p></li><li><p>PrintThreads</p></li><li><p>PrintJNI</p></li><li><p>FindDeadlock</p></li><li><p>ThreadDump</p></li><li><p>EnableBiasLocking</p></li><li><p>RevokeBias</p></li><li><p>HeapDumper</p></li><li><p>GetAllStackTrace</p></li></ul></div></div></section><section><div class="slide-content"><div class="paragraph"><p>NIO Mapped Byte Buffers
+Counted loops
+Array copying
+JNI Critical Regions
+JNI Handle Allocations
+Large object initialization</p></div></div></section><section><div class="slide-content"><div class="ulist"><div class="title">Code phase and Safepoint</div><ul><li><p>Running interpreted
+When executing branching/returning byte codes interpreter
+checks if the poll is armed, if so blocks in SS::block().</p></li><li><p>Running in native code
+When returning from the native code, a Java thread must check
+the safepoint _state to see if we must block.  If the
+VM thread sees a Java thread in native, it does
+not wait for this thread to block.  The order of the memory
+writes and reads of both the safepoint state and the Java
+threads state is critical.  In order to guarantee that the
+memory writes are serialized with respect to each other,
+the VM thread issues a memory barrier instruction.</p></li><li><p>Running compiled Code
+Compiled code reads the local polling page that
+is set to fault if we are trying to get to a safepoint.</p></li><li><p>Blocked
+A thread which is blocked will not be allowed to return from the
+block condition until the safepoint operation is complete.</p></li><li><p>In VM or Transitioning between states
+If a Java thread is currently running in the VM or transitioning
+between states, the safepointing code will poll the thread state
+until the thread blocks itself when it attempts transitions to a
+new state or locking a safepoint checked monitor.</p></li></ul></div></div></section><section id="stack_processing"><h2>stack processing</h2><div class="slide-content"><div class="paragraph"><p>During safepoint each thread stack is processing</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Always process three frames when starting an iteration.</p></div>
 <div class="ulist"><div class="title">The three frames corresponds to:</div><ul><li><p>The callee frame</p></li><li><p>The caller frame</p></li><li><p>An extra frame to deal with unwinding safepointing on the way out. Sometimes, we also call into the runtime to on_unwind(), but then  hit a safepoint poll on the way out from the runtime.</p></li></ul></div>
 <div class="paragraph"><p><code>This allows a callee to always be able to read state from its caller without needing any special barriers.</code></p></div></div></section><section id="jep_376"><h2>JEP-376</h2><div class="slide-content"><div class="paragraph"><p>Concurrent Thread-Stack Processing</p></div></div></section><section><div class="slide-content"><div class="paragraph"><p>Remove thread-stack processing from ZGC safepoints.</p></div>
 <div class="paragraph"><p>It also available in Shenandoah</p></div>
