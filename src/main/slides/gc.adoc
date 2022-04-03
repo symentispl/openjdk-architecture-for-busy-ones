@@ -1,17 +1,16 @@
 == heap
 
-Heap is initilized during creating the Universe. 
-
+Heap is initialized during the creation of the Universe
 
 === GC 
 
-Algorithm is choose during creating the Universe
+An GC algorithm is chosen during creation of the Universe
 
 image::https://media0.giphy.com/media/xUPGctUP1Z50BNlEpa/giphy.gif[background]
 
 === ! 
 
-But sometimes is different than we expect 
+But sometimes is different what we expect 
 
 Ergo, ergo, ergo.. 
 
@@ -55,7 +54,7 @@ image::https://media.makeameme.org/created/kubernetes-take.jpg[]
 
 === roots
 
-Root is basic concept in GC cycle
+The root is a basic concept in the GC cycle
 
 Root is thread, local variables, static fields, final fields. 
 
@@ -63,7 +62,7 @@ Root is thread, local variables, static fields, final fields.
 
 === bariers
 
-Barriers need JIT help for speed
+Barriers need Jthe IT help for speed
 
 image::https://media2.giphy.com/media/wLJSjc5fzMJtS/giphy.gif[background]
 
@@ -190,7 +189,8 @@ size_t ThreadLocalAllocBuffer::initial_desired_size() {
 
 TLAB Size recalculting 
 
-Every FullGC TLAB is resizing if needed 
+Every full GC cycle TLAB is resizing if needed 
+
 // ThreadLocalAllocBuffer::startup_initialization
 
 === !
