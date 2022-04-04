@@ -15,6 +15,18 @@ Architektura OpenJDK dla upartych
 :mmdc: node_modules/.bin/mmdc
 :title-slide-background-image: pexels-pixabay-159275.jpg
 
+== About us 
+
+=== Krystian Zybała
+
+Principal Java engineer 
+
+geek JVM internals, real-time programming, Apache Kafka, Cassandra
+
+speaker, coder 
+
+F1 Fan (Red Bull Racing)
+
 == Jarosław Pałka
 
 Neo4j (a graph database) performance engineer
