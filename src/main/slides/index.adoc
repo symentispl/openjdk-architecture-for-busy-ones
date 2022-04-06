@@ -54,4 +54,5 @@ include::src/main/slides/bytecode.adoc[]
 include::src/main/slides/interpreter.adoc[]
 include::src/main/slides/jit.adoc[]
 include::src/main/slides/gc.adoc[]
+include::src/main/slides/finish.adoc[]
 

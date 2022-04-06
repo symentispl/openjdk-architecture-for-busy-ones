@@ -216,9 +216,9 @@ compiler will fault
 `src/hotspot/share/gc/z/c1` + 
 `src/hotspot/share/gc/z/c2` + 
 
-=== !
+=== Retrie TLAB
 
-Retrie TLAB
+GC can retire TLAB space but only  +
+ZGC and Shenandoah retries space during concurrent stack  processing
 
-GC can retire TLAB space but only 
-ZGC and Shenandoah retries space during concurrent stack processing 
+--
