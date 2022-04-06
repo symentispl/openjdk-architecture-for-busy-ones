@@ -2,6 +2,10 @@
 
 Heap is initialized during the creation of the Universe
 
+=== universe_post_init
+
+`src/hotspot/share/memory/universe.cpp`
+
 === GC 
 
 An GC algorithm is chosen during creation of the Universe

@@ -13,11 +13,6 @@ jint init_globals() {
 }
 -----
 
-=== universe_post_init
-
-`src/hotspot/share/memory/universe.cpp`
-
-
 === initialization  
 
 Make sure klass is linked (verified) before initialization A class could already be verified, since it has been reflected upon.
